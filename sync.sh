@@ -19,4 +19,6 @@ done
 touch .nojekyll
 git add -A
 git commit -qm "Sync from manavjoshi.com $(git -C "$SRC" rev-parse --short HEAD)" || echo "Nothing changed."
-git push -q origin main 2>/dev/null || true
+git pull -q --rebase origin main
+git push -q origin main
+echo "Pushed. Live in about a minute."
