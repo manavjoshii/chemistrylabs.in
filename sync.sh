@@ -3,10 +3,11 @@
 # This copies the COMMITTED build from ~/manavjoshi.com (never uncommitted
 # work), moves it from /chemistrylab/ to the site root, and pushes.
 # Run it every time you push a new /chemistrylab/ build to manavjoshi.com.
+# team/ is the team hub (~/team-hub/public); this script never touches it.
 set -e
 SRC=~/manavjoshi.com
 cd "$(dirname "$0")"
-find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md -exec rm -rf {} +
+find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md ! -name team -exec rm -rf {} +
 git -C "$SRC" archive HEAD chemistrylab | tar -x --strip-components=1
 # Order matters: absolute links to the old home first, shared site tables
 # second (they stay on manavjoshi.com, one source of truth), the base last.
