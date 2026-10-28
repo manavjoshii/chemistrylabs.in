@@ -198,8 +198,10 @@ function postCard(p) {
 
 function crmTile() {
   const c = D.crm; if (!c) return "";
-  return `<a class="tile w2" href="${esc(c.url)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="t-label"><em>📇</em>CRM</span><span class="spacer"></span>
-    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Open the CRM ↗</span><span class="t-sub">${c.admin ? "Admin · same login" : "Same handle and password"}</span></a>`;
+  /* Opens the CRM already signed in: the CRM takes the same token from #key=. */
+  const href = `${c.url}/#key=${encodeURIComponent(store.get())}`;
+  return `<a class="tile w2" href="${esc(href)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="t-label"><em>📇</em>CRM</span><span class="spacer"></span>
+    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Open the CRM ↗</span><span class="t-sub">${c.admin ? "Admin" : "Your CRM access"}</span></a>`;
 }
 
 const addTile = () => `<button class="tile round add" data-open="add" aria-label="Add">+</button>`;
