@@ -16,7 +16,7 @@ const int = (n) => Math.round(Number(n) || 0).toLocaleString("en-IN");
 const rupees = (n) => "₹" + int(n);
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const day = (d) => { const t = new Date(d + "T00:00:00Z"); return `${WD[t.getUTCDay()]} ${t.getUTCDate()} ${MO[t.getUTCMonth()]}`; };
-const ICON = { Founder: "🎯", WhatsApp: "💬", Practicals: "🧪", "Fashion accelerator": "👗", "Social media": "📸", "Creative communication": "🎨" };
+const ICON = { Founder: "🎯", WhatsApp: "💬", Practicals: "🧪", "Fashion accelerator": "👗", "Social media": "📸", "Creative communication": "🎨", Design: "✏️" };
 const iconOf = (title) => ICON[title] || "🎯";
 
 /* On chemistrylabs.in/team the page is static and the hub runs on Cloudflare. */
@@ -65,7 +65,7 @@ function beaker({ open, icon, label, value, money, sub, done, likely = 0, target
     ${target ? `<i class="goal" style="--at:${pc(target)}"><span>${money ? rupees(target) : int(target)}</span></i><i class="pace" style="--pace:${pc((target * m.elapsed) / m.days)}"></i>` : ""}
     <span class="t-label"><em>${icon}</em>${esc(label)}</span>
     <span class="spacer"></span>
-    <span class="t-big ${money ? "money" : ""}"><span ${value != null ? `data-count="${value}" data-fmt="${money ? "money" : "int"}"` : ""}>${value == null ? "—" : money ? rupees(value) : int(value)}</span>${pct && value != null ? "%" : ""}</span>
+    <span class="t-big ${money ? "money" : ""}"><span ${value != null ? `data-count="${value}" data-fmt="${money ? "money" : Number.isInteger(value) ? "int" : "dec"}"` : ""}>${value == null ? "—" : money ? rupees(value) : Number.isInteger(value) ? int(value) : value.toFixed(1)}</span>${pct && value != null ? "%" : ""}</span>
     <span class="t-sub">${sub}</span></button>`;
 }
 
@@ -92,6 +92,8 @@ function mineTile() {
   if (m.unit === "steps") return `<button class="tile w2 h2" data-open="mine"><span class="t-label"><em>${icon}</em>${esc(m.label)}</span><span class="spacer"></span>
     <span style="align-self:center">${ring(m.value, m.target, `${m.value}/${m.target}`, true)}</span><span class="spacer"></span>
     <span class="t-sub">${m.empty ? esc(m.empty) : `${m.target - m.value} to go`}</span></button>`;
+  if (m.unit === "days") return beaker({ open: "mine", icon, label: m.label, value: m.value, done: m.value ?? 0, target: m.target,
+    sub: m.value == null ? esc(m.empty || "") : m.value >= 3 ? "days to spare · well done" : m.value >= 2 ? "days to spare · on target" : "days to spare · late" });
   if (m.unit === "%") return beaker({ open: "mine", icon, label: m.label, value: m.value, pct: true, done: m.value, target: m.target,
     sub: esc(m.breakdown?.[0] || "") });
   return beaker({ open: "mine", icon, label: m.label, value: m.value, done: m.value, likely: Math.max(0, (m.forecast ?? m.value) - m.value),
@@ -121,7 +123,7 @@ function teamTile() {
 }
 
 function projectsTile() {
-  const ps = D.projects || [];
+  const ps = D.me.owner ? D.projects || [] : D.myProjects || [];
   const live = ps.filter((p) => p.status === "live").length, waiting = ps.filter((p) => p.status === "proposed").length;
   const stuck = ps.filter((p) => p.risk === "stuck").length;
   return `<button class="tile w2 h2" data-open="projects"><span class="t-label"><em>🗂️</em>Projects</span><span class="spacer"></span>
@@ -214,7 +216,7 @@ function draw() {
     ? [peopleTile(), revenueTile(), alarmTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), crmTile(), comingTile(false), addTile()]
     : d.cal
       ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), calJobs ? "" : jobTile(), comingTile(calJobs), addTile()]
-      : [peopleTile(), mineTile(), alarmTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), comingTile(!d.jobs?.length), addTile()];
+      : [peopleTile(), mineTile(), alarmTile(), stepsTile(true), roomTile(), d.myProjects?.length ? projectsTile() : "", crmTile(), jobTile(), comingTile(!d.jobs?.length), addTile()];
   app.innerHTML = `<div class="wall"></div><div class="screen">
     <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
       <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b></div></header>
@@ -248,7 +250,7 @@ function countUp(el) {
   const to = Number(el.dataset.count) || 0, money = el.dataset.fmt === "money";
   if (!to) return;
   const t0 = performance.now(), dur = 1100;
-  const step = (t) => { const k = Math.min(1, (t - t0) / dur), v = to * (1 - Math.pow(1 - k, 3)); el.textContent = money ? rupees(v) : int(v); if (k < 1) requestAnimationFrame(step); };
+  const step = (t) => { const k = Math.min(1, (t - t0) / dur), v = to * (1 - Math.pow(1 - k, 3)); el.textContent = money ? rupees(v) : el.dataset.fmt === "dec" ? v.toFixed(1) : int(v); if (k < 1) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
 
@@ -319,13 +321,14 @@ const PAGES = {
       <span class="num-r">${t.value != null ? int(t.value) + (t.target ? `<small>of ${int(t.target)}</small>` : "") : "—"}${t.money != null ? `<small>${rupees(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
   },
   projects() {
-    const ps = D.projects || [];
+    const ps = D.me.owner ? D.projects || [] : D.myProjects || [];
     return `<div class="icon">🗂️</div><h2>Projects</h2>${rows(ps.map((p) => `<li style="align-items:flex-start"><span class="txt">
       <b style="font-weight:600">${esc(p.title)}</b> <span class="chip ${esc(p.risk.replace(/\s+/g, "-"))}">${esc(p.risk)}</span>
       <span class="meta">${p.done} of ${p.total} steps${p.next ? ` · next: ${esc(p.next.title)} (${esc(p.next.owner)})` : ""}</span>
       <div class="pips">${p.steps.map((s) => `<i class="${s.done ? "d" : s.late ? "l" : ""}"></i>`).join("")}</div>
       <details class="fold" style="border:0;padding:8px 0 0"><summary>Steps</summary>${rows(p.steps.map((s) => `<li><span class="txt">${s.done ? "<s>" : ""}${esc(s.title)}${s.done ? "</s>" : ""}<span class="meta ${s.late ? "bad" : ""}">${esc(s.owner)} · ${s.due ? (s.late ? "was due " : "by ") + day(s.due) : "no date yet"}</span></span></li>`), "")}</details>
       ${p.status === "proposed" ? `<div class="acts"><button class="btn small green" data-decide="approve" data-id="${p.id}">Approve</button><button class="btn small ghost" data-decide="kill" data-id="${p.id}">Kill</button></div>` : ""}
+      ${p.status === "live" ? `<form class="inline addstep" data-project="${p.id}" style="margin-top:10px"><input name="t" placeholder="Add a step" aria-label="Add a step to ${esc(p.title)}"><input name="d" type="date" aria-label="By when" style="max-width:150px"><button class="btn small ghost">Add</button></form>` : ""}
       </span></li>`), "No projects yet. Start one with +.")}
       ${D.waiting ? `<p class="t-sub" style="margin-top:14px">${D.waiting === 1 ? "One message is" : D.waiting + " messages are"} waiting to go to the team. Nothing is sent until you say go.</p>` : ""}`;
   },
@@ -403,6 +406,11 @@ function wirePage(page, close, paint) {
     };
     inp.addEventListener("change", save);
     inp.addEventListener("paste", () => setTimeout(save, 0));
+  });
+  page.querySelectorAll("form.addstep").forEach((f) => f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!f.t.value.trim()) return;
+    try { await api("/api/step/add", { project: Number(f.dataset.project), title: f.t.value, due: f.d.value }); await after(paint); } catch (err) { alert(err.message); }
   });
   page.querySelectorAll("form.addpost").forEach((f) => {
     let format = "reel";
