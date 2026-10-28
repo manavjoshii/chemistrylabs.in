@@ -316,7 +316,11 @@ const PAGES = {
     return `<div class="icon">📋</div><h2>Your job</h2>${rows(D.jobs.map((j) => `<li><span class="chip">${j.check === "auto" ? "auto" : "tick"}</span><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : j.blank ? "Manav sets this: " + esc(j.blank.toLowerCase()) : j.needs === "instagram" ? "Checks itself once Instagram is connected" : "You tick this one"}</span></span></li>`), "")}`;
   },
   team() {
-    return `<div class="icon">🧑‍🤝‍🧑</div><h2>Team</h2>${rows((D.team || []).map((t) => `<li><span class="txt"><b style="font-weight:600">${esc(t.name)}</b> <span class="chip ${esc(t.status.replace(/\s+/g, "-"))}">${esc(t.status)}</span>
+    const s = D.send;
+    const sw = s ? `<p class="block-h" style="margin-top:0">WhatsApp nudges</p>
+      <div class="chips" data-send>${[["off", "Off"], ["manav", "Only me"], ["team", "Whole team"]].map(([k, l]) => `<button type="button" class="${s.mode === k ? "on" : ""}" data-mode="${k}">${l}</button>`).join("")}</div>
+      <p class="t-sub" style="margin:-8px 0 16px">Meta's approval of the message: ${esc(String(s.template).toLowerCase())}. Nothing sends between 10pm and 8am.</p>` : "";
+    return `<div class="icon">🧑‍🤝‍🧑</div><h2>Team</h2>${sw}${rows((D.team || []).map((t) => `<li><span class="txt"><b style="font-weight:600">${esc(t.name)}</b> <span class="chip ${esc(t.status.replace(/\s+/g, "-"))}">${esc(t.status)}</span>
       <span class="meta">${esc(t.title)} · ${esc(t.label || "")}${t.account ? "" : " · no CRM account yet"}</span></span>
       <span class="num-r">${t.value != null ? int(t.value) + (t.target ? `<small>of ${int(t.target)}</small>` : "") : "—"}${t.money != null ? `<small>${rupees(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
   },
@@ -406,6 +410,9 @@ function wirePage(page, close, paint) {
     };
     inp.addEventListener("change", save);
     inp.addEventListener("paste", () => setTimeout(save, 0));
+  });
+  page.querySelectorAll("[data-send] [data-mode]").forEach((b) => b.onclick = async () => {
+    try { await api("/api/send", { mode: b.dataset.mode }); await after(paint); } catch (e) { alert(e.message); }
   });
   page.querySelectorAll("form.addstep").forEach((f) => f.onsubmit = async (e) => {
     e.preventDefault();
