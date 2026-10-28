@@ -51,12 +51,12 @@ function login(msg = "") {
 /* The beaker. Solid green is what's done or paid for, the hatched band above
    it is what the invites out will probably add, the dashed line is the
    target, and the notch on the left is where today's pace says it should be. */
-function beaker({ open, icon, label, value, money, sub, done, likely = 0, target, idle }) {
+function beaker({ open, icon, label, value, money, sub, done, likely = 0, target, idle, pct }) {
   const forecast = done + likely;
   /* The target sits at 68% of the glass, so the line never crosses the label
      at the top; a number past its target keeps rising, up to 82%. */
-  const top = Math.max(target || 0, 1), scale = target ? 68 : 60;
-  const ref = target ? top : Math.max(forecast, 1);
+  const top = Math.max(target || 0, 1), scale = target ? 68 : pct ? 75 : 60;
+  const ref = pct ? 100 : target ? top : Math.max(forecast, 1);
   const pc = (v) => `${Math.min(82, (v / ref) * scale).toFixed(1)}%`;
   const m = D.month;
   const won = target && done >= target;
@@ -65,7 +65,7 @@ function beaker({ open, icon, label, value, money, sub, done, likely = 0, target
     ${target ? `<i class="goal" style="--at:${pc(target)}"><span>${money ? rupees(target) : int(target)}</span></i><i class="pace" style="--pace:${pc((target * m.elapsed) / m.days)}"></i>` : ""}
     <span class="t-label"><em>${icon}</em>${esc(label)}</span>
     <span class="spacer"></span>
-    <span class="t-big ${money ? "money" : ""}" ${value != null ? `data-count="${value}" data-fmt="${money ? "money" : "int"}"` : ""}>${value == null ? "—" : money ? rupees(value) : int(value)}</span>
+    <span class="t-big ${money ? "money" : ""}"><span ${value != null ? `data-count="${value}" data-fmt="${money ? "money" : "int"}"` : ""}>${value == null ? "—" : money ? rupees(value) : int(value)}</span>${pct && value != null ? "%" : ""}</span>
     <span class="t-sub">${sub}</span></button>`;
 }
 
@@ -92,6 +92,8 @@ function mineTile() {
   if (m.unit === "steps") return `<button class="tile w2 h2" data-open="mine"><span class="t-label"><em>${icon}</em>${esc(m.label)}</span><span class="spacer"></span>
     <span style="align-self:center">${ring(m.value, m.target, `${m.value}/${m.target}`, true)}</span><span class="spacer"></span>
     <span class="t-sub">${m.empty ? esc(m.empty) : `${m.target - m.value} to go`}</span></button>`;
+  if (m.unit === "%") return beaker({ open: "mine", icon, label: m.label, value: m.value, pct: true, done: m.value, target: m.target,
+    sub: esc(m.breakdown?.[0] || "") });
   return beaker({ open: "mine", icon, label: m.label, value: m.value, done: m.value, likely: Math.max(0, (m.forecast ?? m.value) - m.value),
     target: m.target, sub: m.target ? `of ${int(m.target)}` : m.money != null ? `${rupees(m.money)} from your work` : esc(m.breakdown?.[0] || "") });
 }
@@ -188,7 +190,8 @@ function postCard(p) {
     <div class="post-h"><span class="chip">${esc(cap(p.format))}</span>${p.time ? `<span class="t-sub">${esc(p.time)}</span>` : ""}</div>
     <p class="post-idea">${esc(p.idea || "Untitled")}</p>
     <div class="stepper">${S.map((s, i) => `<span class="${i <= p.stage ? "on" : ""} ${i === p.stage ? "now" : ""}"><i></i><small>${esc(s.label)}</small></span>`).join("")}</div>
-    ${next ? `<div class="post-act"><button class="btn green small" data-act="advance">${esc(next.act)}</button><span class="t-sub">${esc(cap(nextWho))}'s turn</span></div>` : `<p class="t-sub" style="margin:10px 0 0">Posted ✓</p>`}
+    ${next ? `<div class="post-act"><button class="btn green small" data-act="advance">${esc(next.act)}</button>${p.stage === 2 ? `<button class="btn ghost small" data-act="reject">Needs changes</button>` : `<span class="t-sub">${esc(cap(nextWho))}'s turn</span>`}</div>` : `<p class="t-sub" style="margin:10px 0 0">Posted ✓</p>`}
+    ${p.backs ? `<p class="t-sub" style="margin:8px 0 0">Sent back ${p.backs === 1 ? "once" : p.backs + " times"}</p>` : ""}
     <div class="post-links">${p.link ? `<a class="btn ghost small" href="${esc(p.link)}" target="_blank" rel="noopener">📁 Open in Drive</a>` : `<input class="drive" placeholder="Paste the Drive link" aria-label="Drive link for this post">`}
       <button class="linkish" data-act="${p.stage > 0 ? "back" : "remove"}">${p.stage > 0 ? "Undo last stage" : "Remove"}</button></div></div>`;
 }
@@ -296,7 +299,7 @@ const PAGES = {
   mine() {
     const m = D.mine;
     return `<div class="icon">${iconOf(D.me.title)}</div><h2>${esc(m.label)}</h2><dl class="props">
-      ${m.value != null ? prop("✔︎ This month", int(m.value) + (m.unit ? " " + esc(m.unit) : "")) : prop("Status", esc(m.empty || "Waiting"))}
+      ${m.value != null ? prop("✔︎ This month", int(m.value) + (m.unit === "%" ? "%" : m.unit ? " " + esc(m.unit) : "")) : prop("Status", esc(m.empty || "Waiting"))}
       ${m.target ? prop("◎ Target", int(m.target)) : ""}
       ${m.forecast != null && m.value != null ? prop("➜ Heading for", int(m.forecast)) : ""}
       ${m.money != null ? prop("💰 From your work", rupees(m.money)) : ""}
