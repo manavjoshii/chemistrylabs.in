@@ -20,16 +20,23 @@ const rupees = (n) => "₹" + int(n);
    again after 15 seconds and on every reload. The beaker still fills, because a
    share of the target is not the number. */
 const SECRET_MS = 15000;
-const secret = (n, mask = "₹ ••••") => `<span class="secret" data-v="${esc(rupees(n))}" data-m="${mask}" role="button" tabindex="0" title="Tap to show">${mask}</span>`;
+const secret = (n, mask = "₹ ••••") => `<span class="secret" data-v="${esc(rupees(n))}" data-m="${mask}" role="button" tabindex="0" title="Tap to show or hide">${mask}</span>`;
 function revealSecrets() {
   document.querySelectorAll(".secret").forEach((s) => { s.textContent = s.dataset.v; s.classList.add("shown"); });
   clearTimeout(revealSecrets.t);
   revealSecrets.t = setTimeout(() => document.querySelectorAll(".secret")
     .forEach((s) => { s.textContent = s.dataset.m; s.classList.remove("shown"); }), SECRET_MS);
 }
+/* A tap shows the figures; a tap on a shown figure hides them again at once. */
+function hideSecrets() {
+  clearTimeout(revealSecrets.t);
+  document.querySelectorAll(".secret").forEach((s) => { s.textContent = s.dataset.m; s.classList.remove("shown"); });
+}
 document.addEventListener("click", (e) => {
-  if (!e.target.closest || !e.target.closest(".secret")) return;
-  e.preventDefault(); e.stopPropagation(); revealSecrets();
+  const s = e.target.closest && e.target.closest(".secret");
+  if (!s) return;
+  e.preventDefault(); e.stopPropagation();
+  s.classList.contains("shown") ? hideSecrets() : revealSecrets();
 }, true);
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const day = (d) => { const t = new Date(d + "T00:00:00Z"); return `${WD[t.getUTCDay()]} ${t.getUTCDate()} ${MO[t.getUTCMonth()]}`; };
@@ -310,7 +317,7 @@ const PAGES = {
       ${prop("〰 Likely from invites", c.likely ? "~" + secret(c.likely) : secret(0))}
       ${prop("➜ Heading for", secret(c.forecast), goodBad(c))}
       ${prop("◎ Target", c.target ? secret(c.target) : "Not set")}</dl>
-      <p class="t-sub" style="margin:-6px 0 12px">Tap any ₹ •••• to see it. It hides again after 15 seconds.</p>
+      <p class="t-sub" style="margin:-6px 0 12px">Tap any ₹ •••• to see it, and tap again to hide it. It also hides itself after 15 seconds.</p>
       ${goalForm("revenue", c, true)}
       ${fold("How this is counted", "Seats paid this month, by the day the money came in, at each room's own price. Comped seats are never money. Plus anything added with + as money in. Hosting income is never part of it. Only you can see this.")}`;
   },
