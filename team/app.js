@@ -14,6 +14,23 @@ let D = null, firstPaint = true;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const int = (n) => Math.round(Number(n) || 0).toLocaleString("en-IN");
 const rupees = (n) => "₹" + int(n);
+
+/* REVENUE STAYS HIDDEN UNTIL ASKED FOR, his ruling, 30 Oct 2026: like a bank app,
+   every absolute rupee figure shows as ₹ •••• and appears on a tap, then hides
+   again after 15 seconds and on every reload. The beaker still fills, because a
+   share of the target is not the number. */
+const SECRET_MS = 15000;
+const secret = (n, mask = "₹ ••••") => `<span class="secret" data-v="${esc(rupees(n))}" data-m="${mask}" role="button" tabindex="0" title="Tap to show">${mask}</span>`;
+function revealSecrets() {
+  document.querySelectorAll(".secret").forEach((s) => { s.textContent = s.dataset.v; s.classList.add("shown"); });
+  clearTimeout(revealSecrets.t);
+  revealSecrets.t = setTimeout(() => document.querySelectorAll(".secret")
+    .forEach((s) => { s.textContent = s.dataset.m; s.classList.remove("shown"); }), SECRET_MS);
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest || !e.target.closest(".secret")) return;
+  e.preventDefault(); e.stopPropagation(); revealSecrets();
+}, true);
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const day = (d) => { const t = new Date(d + "T00:00:00Z"); return `${WD[t.getUTCDay()]} ${t.getUTCDate()} ${MO[t.getUTCMonth()]}`; };
 const ICON = { Founder: "🎯", WhatsApp: "💬", Practicals: "🧪", "Fashion accelerator": "👗", "Social media": "📸", "Creative communication": "🎨", Design: "✏️" };
@@ -62,18 +79,19 @@ function beaker({ open, icon, label, value, money, sub, done, likely = 0, target
   const won = target && done >= target;
   return `<button class="tile w2 h2 beaker ${won ? "won" : ""} ${idle ? "idle" : ""}" data-open="${open}">
     <div class="liquid"><div class="ghost" style="--ghost:${idle ? "0%" : pc(forecast)}"></div><div class="fill" style="--fill:${idle ? "0%" : pc(done)}"></div></div>
-    ${target ? `<i class="goal" style="--at:${pc(target)}"><span>${money ? rupees(target) : int(target)}</span></i><i class="pace" style="--pace:${pc((target * m.elapsed) / m.days)}"></i>` : ""}
+    ${target ? `<i class="goal" style="--at:${pc(target)}"><span>${money ? secret(target, "₹ •••") : int(target)}</span></i><i class="pace" style="--pace:${pc((target * m.elapsed) / m.days)}"></i>` : ""}
     <span class="t-label"><em>${icon}</em>${esc(label)}</span>
     <span class="spacer"></span>
-    <span class="t-big ${money ? "money" : ""}"><span ${value != null ? `data-count="${value}" data-fmt="${money ? "money" : Number.isInteger(value) ? "int" : "dec"}"` : ""}>${value == null ? "—" : money ? rupees(value) : Number.isInteger(value) ? int(value) : value.toFixed(1)}</span>${pct && value != null ? "%" : ""}</span>
+    <span class="t-big ${money ? "money" : ""}">${money && value != null ? secret(value) : `<span ${value != null ? `data-count="${value}" data-fmt="${Number.isInteger(value) ? "int" : "dec"}"` : ""}>${value == null ? "—" : Number.isInteger(value) ? int(value) : value.toFixed(1)}</span>`}${pct && value != null ? "%" : ""}</span>
     <span class="t-sub">${sub}</span></button>`;
 }
 
 function verdictOf(c, money) {
-  const f = money ? rupees(c.forecast) : int(c.forecast);
+  const f = money ? secret(c.forecast) : int(c.forecast);
   if (!c.target) return `heading for ${f}`;
   const gap = Math.round(c.forecast - c.target);
-  return gap >= 0 ? `of ${money ? rupees(c.target) : int(c.target)} · on target` : `of ${money ? rupees(c.target) : int(c.target)} · ${money ? rupees(-gap) : int(-gap)} short`;
+  const t = money ? secret(c.target) : int(c.target);
+  return gap >= 0 ? `of ${t} · on target` : `of ${t} · ${money ? secret(-gap) : int(-gap)} short`;
 }
 
 const peopleTile = () => {
@@ -97,7 +115,7 @@ function mineTile() {
   if (m.unit === "%") return beaker({ open: "mine", icon, label: m.label, value: m.value, pct: true, done: m.value, target: m.target,
     sub: esc(m.breakdown?.[0] || "") });
   return beaker({ open: "mine", icon, label: m.label, value: m.value, done: m.value, likely: Math.max(0, (m.forecast ?? m.value) - m.value),
-    target: m.target, sub: m.target ? `of ${int(m.target)}` : m.money != null ? `${rupees(m.money)} from your work` : esc(m.breakdown?.[0] || "") });
+    target: m.target, sub: m.target ? `of ${int(m.target)}` : m.money != null ? `${secret(m.money)} from your work` : esc(m.breakdown?.[0] || "") });
 }
 
 function ring(value, of, text, big = false, on = false, badge = false) {
@@ -263,7 +281,7 @@ const goodBad = (c) => (c.target ? (c.forecast >= c.target ? "good" : "bad") : "
 
 function goalForm(kind, c, money) {
   if (!D.me.owner) return "";
-  return `<form class="inline" data-goal="${kind}" style="margin:6px 0 4px"><input inputmode="numeric" placeholder="${c.target ? (money ? rupees(c.target) : int(c.target)) : money ? "₹ target" : "Target"}" aria-label="${esc(D.month.name)} target" required>
+  return `<form class="inline" data-goal="${kind}" style="margin:6px 0 4px"><input inputmode="numeric" placeholder="${c.target ? (money ? "New ₹ target" : int(c.target)) : money ? "₹ target" : "Target"}" aria-label="${esc(D.month.name)} target" required>
     <button class="btn small">${c.target ? "Change" : "Set"} target</button></form>`;
 }
 
@@ -286,12 +304,13 @@ const PAGES = {
   revenue() {
     const c = D.chase.revenue;
     return `<div class="icon">💰</div><h2>Revenue</h2><dl class="props">
-      ${prop("✔︎ In so far", rupees(c.done))}
-      ${prop("🎟 From seats", rupees(c.crm))}
-      ${prop("＋ From elsewhere", rupees(c.other))}
-      ${prop("〰 Likely from invites", c.likely ? "~" + rupees(c.likely) : "₹0")}
-      ${prop("➜ Heading for", rupees(c.forecast), goodBad(c))}
-      ${prop("◎ Target", c.target ? rupees(c.target) : "Not set")}</dl>
+      ${prop("✔︎ In so far", secret(c.done))}
+      ${prop("🎟 From seats", secret(c.crm))}
+      ${prop("＋ From elsewhere", secret(c.other))}
+      ${prop("〰 Likely from invites", c.likely ? "~" + secret(c.likely) : secret(0))}
+      ${prop("➜ Heading for", secret(c.forecast), goodBad(c))}
+      ${prop("◎ Target", c.target ? secret(c.target) : "Not set")}</dl>
+      <p class="t-sub" style="margin:-6px 0 12px">Tap any ₹ •••• to see it. It hides again after 15 seconds.</p>
       ${goalForm("revenue", c, true)}
       ${fold("How this is counted", "Seats paid this month, by the day the money came in, at each room's own price. Comped seats are never money. Plus anything added with + as money in. Hosting income is never part of it. Only you can see this.")}`;
   },
@@ -306,7 +325,7 @@ const PAGES = {
       ${m.value != null ? prop("✔︎ This month", int(m.value) + (m.unit === "%" ? "%" : m.unit ? " " + esc(m.unit) : "")) : prop("Status", esc(m.empty || "Waiting"))}
       ${m.target ? prop("◎ Target", int(m.target)) : ""}
       ${m.forecast != null && m.value != null ? prop("➜ Heading for", int(m.forecast)) : ""}
-      ${m.money != null ? prop("💰 From your work", rupees(m.money)) : ""}
+      ${m.money != null ? prop("💰 From your work", secret(m.money)) : ""}
       ${m.plan ? prop("🧪 " + esc(m.plan.label), `${m.plan.value} of ${m.plan.of}`, m.plan.value >= m.plan.of ? "good" : "bad") : ""}
       ${(m.breakdown || []).map((b) => prop("·", esc(b))).join("")}</dl>
       ${m.note ? `<p class="t-sub" style="font-size:14.5px">${esc(m.note)}</p>` : ""}
@@ -322,7 +341,7 @@ const PAGES = {
       <p class="t-sub" style="margin:-8px 0 16px">Meta's approval of the message: ${esc(String(s.template).toLowerCase())}. Nothing sends between 10pm and 8am.</p>` : "";
     return `<div class="icon">🧑‍🤝‍🧑</div><h2>Team</h2>${sw}${rows((D.team || []).map((t) => `<li><span class="txt"><b style="font-weight:600">${esc(t.name)}</b> <span class="chip ${esc(t.status.replace(/\s+/g, "-"))}">${esc(t.status)}</span>
       <span class="meta">${esc(t.title)} · ${esc(t.label || "")}${t.account ? "" : " · no CRM account yet"}</span></span>
-      <span class="num-r">${t.value != null ? int(t.value) + (t.target ? `<small>of ${int(t.target)}</small>` : "") : "—"}${t.money != null ? `<small>${rupees(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
+      <span class="num-r">${t.value != null ? int(t.value) + (t.target ? `<small>of ${int(t.target)}</small>` : "") : "—"}${t.money != null ? `<small>${secret(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
   },
   projects() {
     const ps = D.me.owner ? D.projects || [] : D.myProjects || [];
