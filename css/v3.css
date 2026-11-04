@@ -577,3 +577,28 @@ html{scroll-snap-type:y proximity}
 @media (max-width:820px) and (max-height:700px){.why__text{font-size:min(5.3vw,3.05svh)}.flaskwrap{display:none}}
 .why__text{line-height:1.2}
 .flaskwrap{bottom:calc(var(--tabs) + 2px);right:calc(var(--rail) - 14px)}
+
+/* Phase 2: photos, company logos and proof */
+.sec--flame .rooms3{margin-top:0}
+.sec--copper .rooms3{margin-top:clamp(20px,3vw,36px)}
+.sec--flame + .sec--flame{padding-top:0}
+/* Who is in the room: a strip of the same paper as the prints above it, each logo in its own colours */
+.credits{position:relative;z-index:1;background:var(--paper);color:var(--ink);padding:clamp(26px,4.6vh,46px) 0 clamp(30px,5.2vh,52px);display:grid;gap:clamp(14px,2.4vh,24px)}
+.credits__t{margin:0;padding-inline:var(--rail);text-align:center;font:400 clamp(1.2rem,min(1.75vw,3.2vh),1.6rem)/1.2 var(--hand)}
+.credits__view{overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 var(--rail),#000 calc(100% - var(--rail)),transparent);mask:linear-gradient(90deg,transparent,#000 var(--rail),#000 calc(100% - var(--rail)),transparent)}
+.credits__run{display:flex;width:max-content;animation:credits 80s linear infinite}
+.credits__set{display:flex;align-items:center;flex:none;gap:clamp(44px,5vw,84px);padding-right:clamp(44px,5vw,84px);height:clamp(52px,7.4vh,68px)}
+.credits img{display:block;flex:none;height:calc(var(--k,1)*clamp(30px,2.9vw,40px));width:auto;object-fit:contain;-webkit-user-drag:none;user-select:none}
+.credits img[src*="blinkit"],.credits img[src*="tvf"]{border-radius:5px}
+@keyframes credits{to{transform:translateX(-33.3333%)}}
+@media (prefers-reduced-motion:reduce){.credits__run{animation:none;width:auto}.credits__set{flex-wrap:wrap;justify-content:center;height:auto;row-gap:18px;padding-inline:var(--rail)}.credits__set[aria-hidden]{display:none}}
+.said .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:820px){.said .stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vc__note{margin:0;font:700 clamp(.98rem,1.25vw,1.15rem)/1.26 var(--text);letter-spacing:-.012em;max-width:42ch}
+.invite{display:block;justify-self:start}
+.invite summary{list-style:none;cursor:pointer}
+.invite summary::-webkit-details-marker{display:none}
+.invite__menu{margin-top:10px}
+.invite__menu .pills__lead{color:inherit}
+.s-copper .invite__menu .dpill,.sec--copper .invite__menu .dpill{background:rgba(253,248,240,.17)}
+@media (max-width:820px) and (max-height:700px){.hero .big{font-size:min(8.8vw,5.6svh)}}

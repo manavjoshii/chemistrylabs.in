@@ -429,6 +429,8 @@
     var r = flo.getBoundingClientRect(), under = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2), el = null;
     for (var i = 0; i < under.length; i++) { if (!flo.contains(under[i])) { el = under[i]; break; } }
     flo.toggleAttribute('data-primary', !!(el && el.closest('.hero')));
+    var pr = el && el.closest('.print'), ph = pr && pr.querySelector('img'), pq = ph && ph.getBoundingClientRect(), fx = r.left + r.width / 2, fy = r.top + r.height / 2;
+    if (pq && fx > pq.left && fx < pq.right && fy > pq.top && fy < pq.bottom) { flo.dataset.tone = 'dark'; return; }
     while (el && el !== document.documentElement) {
       var b = getComputedStyle(el).backgroundColor, m = b.match(/[\d.]+/g);
       if (m && (m.length < 4 || +m[3] > 0.5)) {
