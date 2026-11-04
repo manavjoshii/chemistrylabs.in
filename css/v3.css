@@ -118,12 +118,6 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .ask .say,.ask .btn{position:relative;z-index:2}
 .ask .btn{margin-top:clamp(18px,3vh,30px);align-self:flex-start}
 @media (max-width:760px){.ask__env{top:auto;bottom:6%;right:-20px;transform:rotate(8deg)}}
-.foot{position:relative;z-index:1;background:var(--green-deep);padding:clamp(30px,4vw,48px) var(--rail) calc(var(--tabs) + 56px);display:flex;flex-wrap:wrap;gap:18px 40px;justify-content:space-between;align-items:flex-start}
-.foot nav{display:flex;flex-wrap:wrap;gap:8px 20px;font-weight:500;font-size:1rem}
-.foot small{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;opacity:.8;width:100%}
-.foot a{text-underline-offset:.2em;text-decoration-thickness:1.5px}
-.foot a:hover{color:var(--sun)}
-.foot img{height:50px;width:auto}
 
 .js [data-up]{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease),transform .75s var(--ease)}
 .js [data-up].on{opacity:1;transform:none}
@@ -282,8 +276,6 @@ html{scroll-snap-type:y proximity}
 /* ── The logo floats, with no bar behind it. It reads whatever passes under it ── */
 .flogo:hover{transform:scale(1.07) rotate(-2deg)}
 .flogo:active{transform:scale(.93)}
-.foot__logo{display:block;width:96px;color:var(--paper)}
-.foot__logo svg{display:block;width:100%;height:auto}
 
 /* ── Navigation: a shelf of glass, one flower per experiment, its name always showing ── */
 .tabs{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:55;display:flex;align-items:flex-end;gap:0;padding:0 5px;background:var(--paper);border-radius:12px 12px 0 0;box-shadow:0 -3px 16px rgba(16,13,9,.2);height:calc(var(--shelf) + env(safe-area-inset-bottom))}
@@ -291,7 +283,7 @@ html{scroll-snap-type:y proximity}
 .vase{position:absolute;left:50%;bottom:calc(100% - 3px);margin-left:calc(var(--vw)/-2);width:var(--vw);aspect-ratio:252/300;filter:drop-shadow(0 3px 3px rgba(16,13,9,.3));transition:transform .32s var(--spring)}
 .vase img{position:absolute;inset:0;width:100%;height:100%;-webkit-user-drag:none;user-select:none}
 .vase .fl{transform-origin:50% 66%;transition:transform .45s var(--spring)}
-.tabs a span{font:800 clamp(.66rem,.78vw,.76rem)/1.05 var(--text);letter-spacing:-.018em;text-align:center;padding:0 2px;border-radius:5px;transition:color .2s}
+.tabs a span{font:800 clamp(.72rem,.84vw,.8rem)/1.05 var(--text);letter-spacing:-.018em;text-align:center;padding:0 2px;border-radius:5px;transition:color .2s}
 .tabs a:hover .vase,.tabs a[aria-current] .vase,.tabs a.is-here .vase{transform:translateY(-6px)}
 .tabs a:hover .fl,.tabs a[aria-current] .fl,.tabs a.is-here .fl{transform:scale(1.16) rotate(-4deg)}
 .tabs a:hover span,.tabs a.is-here span{color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:2px;text-decoration-color:var(--c)}
@@ -302,16 +294,13 @@ html{scroll-snap-type:y proximity}
 @keyframes wipe{to{clip-path:circle(150vmax at var(--x,50%) var(--y,100%))}}
 :root{--shelf:clamp(34px,3vw,40px);--vw:clamp(52px,4.4vw,62px)}
 @media (max-width:820px){
-  :root{--shelf:36px;--vw:clamp(46px,13vw,52px)}
+  :root{--shelf:44px;--tabs:68px;--vw:clamp(46px,13vw,52px)}
   .tabs{left:0;right:0;transform:none;justify-content:space-around;border-radius:10px 10px 0 0}
   .tabs a{flex:1 1 0;width:auto;min-width:0}
-  .tabs a span{font-size:clamp(.6rem,2.7vw,.7rem)}
+  .tabs a span{font-size:clamp(.75rem,3.4vw,.875rem);letter-spacing:-.025em}
 }
 
 /* ── Name units: every name is set like the logo. The logo signs it at the bottom right ── */
-.lockup--lab{--w:clamp(190px,min(23vw,42vh),320px);position:relative;display:block;width:var(--w);margin-bottom:.1em}
-.lockup--lab>svg{width:100%;height:auto;display:block;color:var(--paper)}
-.lockup__hand{position:absolute;left:33%;bottom:.3%;font:400 calc(var(--w)*.15)/1 var(--hand);color:var(--ink);white-space:nowrap}
 
 /* ── Buttons: asking for an invite is a ticket. Everything else is a link ── */
 .go{display:inline-flex;align-items:baseline;gap:.4em;width:fit-content;color:inherit;text-decoration:none;font:800 clamp(1rem,1.3vw,1.22rem)/1.15 var(--text);letter-spacing:-.022em;border-bottom:3px solid currentColor;padding-bottom:2px;justify-self:start;transition:gap .25s var(--spring)}
@@ -322,7 +311,6 @@ html{scroll-snap-type:y proximity}
 .lead{position:relative;min-height:100svh;overflow:hidden;background:var(--c);color:var(--t);display:grid;gap:clamp(10px,2vh,20px) clamp(20px,4vw,60px);padding:calc(var(--bar) + clamp(10px,3vh,30px)) var(--rail) calc(var(--tabs) + 22px)}
 .lead__say{display:grid;gap:clamp(8px,1.8vh,16px);align-content:center;justify-items:start;position:relative;z-index:2;min-height:0}
 .lead__see{position:relative;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
-.lead .lockup--lab{--w:clamp(220px,min(30vw,50vh),430px)}
 .lead .hero__do{margin-top:clamp(4px,1vh,10px)}
 .lead .steam{width:min(80cqw,95cqh)}
 .lead .rider{right:2%;bottom:3%;width:min(94cqw,120cqh)}
@@ -521,17 +509,14 @@ html{scroll-snap-type:y proximity}
 /* Names: capitals in Anton. Reactions and Venture Catalyst are signed: logo, rule, name */
 .lockup{display:block;margin:0;font:inherit;max-width:100%}
 .name{display:block;font:400 clamp(2.4rem,min(5.2vw,9.6vh),5.4rem)/1.02 var(--giant);text-transform:uppercase;letter-spacing:.004em;margin:0}
-.lockup--co{display:inline-flex;align-items:baseline;gap:.2em;width:fit-content;justify-self:start;font-size:clamp(2.1rem,min(4.6vw,9vh),4.6rem)}
+.lockup--co{display:inline-flex;align-items:baseline;gap:.13em;width:fit-content;justify-self:start;font-size:clamp(2.1rem,min(4.6vw,9vh),4.6rem)}
 .lead .lockup--co{font-size:clamp(2.1rem,min(5vw,9.6vh),5rem)}
 .lockup--co .name{white-space:nowrap;font-size:1em;line-height:1}
 /* Signed at the bottom right. The stacked logo stands on the name's baseline, and "by" sits on the logo's first line, so it reads "by chemistry labs." */
-.lockup__by{--h:max(30px,.8em);display:inline-flex;align-items:baseline;gap:calc(var(--h)*.16);flex:none;color:var(--paper)}
-.lockup__by i{position:relative;bottom:calc(var(--h)*.55);font:500 calc(var(--h)*.42)/1 var(--text);font-style:normal;letter-spacing:-.02em}
+.lockup__by{--h:max(20px,.34em);display:inline-flex;align-items:baseline;gap:calc(var(--h)*.16);flex:none;color:inherit}
+.lockup__by i{position:relative;bottom:calc(var(--h)*.55);font:500 max(9px,calc(var(--h)*.36))/1 var(--text);font-style:normal;letter-spacing:-.01em}
 .lockup__by svg{display:block;flex:none;width:auto;height:var(--h)}
 .lead .lockup:not(.lockup--co) .name{font-size:clamp(2.6rem,min(5.8vw,10.4vh),6rem)}
-.by--lab{--w:clamp(120px,10vw,150px);position:relative;display:block;width:var(--w);margin-bottom:.5em}
-.by--lab>svg{width:100%;height:auto;display:block;color:var(--paper)}
-.by--lab .lockup__hand{color:var(--ink)}
 
 /* Buttons: a plain rectangle */
 .btn{display:inline-flex;align-items:center;gap:.6em;width:fit-content;justify-self:start;background:var(--bg,var(--sun));color:var(--fg,var(--ink));font:800 clamp(1rem,1.25vw,1.18rem)/1 var(--text);letter-spacing:-.018em;white-space:nowrap;text-decoration:none;padding:.95em 1.3em;border-radius:0;transition:background .15s,color .15s}
@@ -569,7 +554,6 @@ html{scroll-snap-type:y proximity}
 }
 
 /* The footer logo is white, so it can carry the red dot */
-.foot__logo{--dot:#e8261c}
 
 /* First-screen objects stay hidden and small until the script has sized them, so nothing flashes huge on a slow connection */
 .js .thing{visibility:hidden;width:1.2em;height:1.2em}
@@ -584,15 +568,6 @@ html{scroll-snap-type:y proximity}
 .sec--copper .rooms3{margin-top:clamp(20px,3vw,36px)}
 .sec--pink + .sec--pink{padding-top:0}
 /* Who is in the room: a strip of the same paper as the prints above it, each logo in its own colours */
-.credits{position:relative;z-index:1;background:var(--paper);color:var(--ink);padding:clamp(26px,4.6vh,46px) 0 clamp(30px,5.2vh,52px);display:grid;gap:clamp(14px,2.4vh,24px)}
-.credits__t{margin:0;padding-inline:var(--rail);text-align:center;font:400 clamp(1.2rem,min(1.75vw,3.2vh),1.6rem)/1.2 var(--hand)}
-.credits__view{overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 var(--rail),#000 calc(100% - var(--rail)),transparent);mask:linear-gradient(90deg,transparent,#000 var(--rail),#000 calc(100% - var(--rail)),transparent)}
-.credits__run{display:flex;width:max-content;animation:credits 80s linear infinite}
-.credits__set{display:flex;align-items:center;flex:none;gap:clamp(44px,5vw,84px);padding-right:clamp(44px,5vw,84px);height:clamp(52px,7.4vh,68px)}
-.credits img{display:block;flex:none;height:calc(var(--k,1)*clamp(30px,2.9vw,40px));width:auto;object-fit:contain;-webkit-user-drag:none;user-select:none}
-.credits img[src*="blinkit"],.credits img[src*="tvf"]{border-radius:5px}
-@keyframes credits{to{transform:translateX(-33.3333%)}}
-@media (prefers-reduced-motion:reduce){.credits__run{animation:none;width:auto}.credits__set{flex-wrap:wrap;justify-content:center;height:auto;row-gap:18px;padding-inline:var(--rail)}.credits__set[aria-hidden]{display:none}}
 .said .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:820px){.said .stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vc__note{margin:0;font:700 clamp(.98rem,1.25vw,1.15rem)/1.26 var(--text);letter-spacing:-.012em;max-width:42ch}
@@ -603,3 +578,102 @@ html{scroll-snap-type:y proximity}
 .invite__menu .pills__lead{color:inherit}
 .s-copper .invite__menu .dpill,.sec--copper .invite__menu .dpill{background:rgba(253,248,240,.17)}
 @media (max-width:820px) and (max-height:700px){.hero .big{font-size:min(8.8vw,5.6svh)}}
+/* The logos turn on the reels of the slot machine from the first sentence. A reel is white, so each logo keeps its own colours. All twelve show at once. On a wide screen six reels run across the page, on a phone three stand taller */
+.credits{position:relative;z-index:1;background:var(--paper);color:var(--ink);display:grid;justify-items:center;gap:clamp(14px,2.6vh,28px);padding:clamp(28px,5vh,56px) var(--rail) clamp(32px,5.6vh,60px);overflow:hidden}
+.credits__t{margin:0;text-align:center;font:400 clamp(1.05rem,1.35vw,1.3rem)/1.2 var(--text);letter-spacing:.005em;color:rgba(16,13,9,.68)}
+.machine{--p:0;--b:0;position:relative;justify-self:center;width:min(100%,calc((100svh - var(--bar) - var(--tabs) - 60px)*1.44));aspect-ratio:879/611;container-type:inline-size}
+.machine::before{content:"";position:absolute;left:6.5%;right:9.5%;top:14.5%;bottom:3%;border-radius:7%;box-shadow:0 22px 44px rgba(16,13,9,.3),0 4px 10px rgba(16,13,9,.22)}
+.machine__frame{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;user-select:none}
+.reel{position:absolute;top:15.8%;height:80.3%;container-type:size;overflow:hidden;background:#fffaf1}
+.reel:nth-child(1){left:8%;width:22.3%}
+.reel:nth-child(2){left:37.6%;width:22.2%}
+.reel:nth-child(3){left:67.1%;width:21.9%}
+.reel__strip{position:absolute;left:0;right:0;top:0;will-change:transform}
+.reel.fast .reel__strip{filter:blur(1.6px)}
+.cell{height:25cqh;display:grid;place-items:center;overflow:hidden}
+.cell img{display:block;max-width:76%;height:calc(var(--k,1)*13cqh);width:auto;object-fit:contain;-webkit-user-drag:none;user-select:none}
+.cell img[src*="blinkit"],.cell img[src*="tvf"]{border-radius:5px}
+.cell b{font:400 13.5cqh/1 var(--giant);color:var(--red);text-transform:uppercase;letter-spacing:.01em}
+.machine__rod{position:absolute;left:93.29%;top:27.17%;width:3.75%;height:auto;z-index:3;transform-origin:27% 100%;transform:scaleY(calc(1 - 1.8*var(--p)));pointer-events:none}
+.machine__ball{position:absolute;left:92.26%;top:18.49%;width:8.08%;height:auto;z-index:4;transform:translateY(calc(var(--p)*28.7cqw)) scale(calc(1 + var(--b)*.22));pointer-events:none}
+.machine__lamp{position:absolute;left:48.35%;top:7%;width:0;height:0;z-index:3;pointer-events:none}
+.machine__lamp::after{content:"";position:absolute;left:-7cqw;top:-7cqw;width:14cqw;height:14cqw;border-radius:50%;background:radial-gradient(circle,rgba(255,226,120,.95),rgba(255,120,40,.45) 34%,rgba(255,120,40,0) 68%);opacity:0;mix-blend-mode:screen}
+.machine.running .machine__lamp::after{animation:lamp .32s steps(2,jump-none) infinite}
+.machine.won .machine__lamp::after{animation:lamp .16s steps(2,jump-none) 12}
+@keyframes lamp{from{opacity:.15}to{opacity:1}}
+.machine__pull{position:absolute;inset:0;z-index:5;width:100%;height:100%;padding:0;border:0;background:none;cursor:grab;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+.machine__pull:active{cursor:grabbing}
+.machine__pull:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+.machine--wide{aspect-ratio:1590/611;width:min(100%,calc((100svh - var(--bar) - var(--tabs) - 96px)*2.6))}
+.machine--wide::before{left:3%;right:5.5%}
+.machine--wide .reel:nth-child(1){left:4.4%;width:12.3%}
+.machine--wide .reel:nth-child(2){left:20.8%;width:12.3%}
+.machine--wide .reel:nth-child(3){left:35.7%;width:12.3%}
+.machine--wide .reel:nth-child(4){left:50.6%;width:12.3%}
+.machine--wide .reel:nth-child(5){left:65.5%;width:12.3%}
+.machine--wide .reel:nth-child(6){left:81.8%;width:12.1%}
+.machine--wide .cell{height:50cqh}
+.machine--wide .cell img{height:calc(var(--k,1)*15cqh);max-width:80%}
+.machine--wide .cell b{font-size:13cqh}
+.machine--wide .machine__rod{left:96.23%;width:2.2%}
+.machine--wide .machine__ball{left:95.72%;width:4.47%;transform:translateY(calc(var(--p)*15.85cqw)) scale(calc(1 + var(--b)*.22))}
+.machine--wide .machine__lamp{left:50%}
+.machine--wide .machine__lamp::after{left:-4.5cqw;top:-4.5cqw;width:9cqw;height:9cqw}
+@media (min-width:901px){.machine--tall{display:none}}
+@media (max-width:900px){.machine--wide{display:none}}
+@media (max-width:760px){
+  .credits .machine--tall{width:calc(100% + 2*var(--rail) - 12px);margin-inline:calc(6px - var(--rail))}
+}
+
+/* The footer: tiny on purpose, because emoji appear nowhere else on the site. Apple emoji beside each page, and a clean Instagram icon */
+.foot{position:relative;z-index:1;background:var(--paper);color:var(--ink);border-top:1px solid rgba(16,13,9,.1);padding:clamp(20px,2.4vw,32px) var(--rail) calc(var(--tabs) + 72px);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(14px,1.6vw,20px) clamp(24px,4vw,64px);align-items:start}
+.foot__logo{display:block;width:clamp(76px,6.4vw,92px);color:var(--green-deep);--dot:currentColor}
+.foot__logo svg{display:block;width:100%;height:auto}
+.foot__list{display:grid;grid-auto-flow:column;grid-template-rows:repeat(4,auto);grid-template-columns:repeat(2,max-content);gap:0 clamp(28px,3.4vw,48px)}
+.foot__list a{display:flex;align-items:center;gap:7px;min-height:25px;color:inherit;text-decoration:none;font:500 .84rem/1.1 var(--text);letter-spacing:-.005em}
+.foot__list img,.foot__list svg{flex:none;display:block;width:14px;height:14px;transition:transform .3s var(--spring);-webkit-user-drag:none}
+.foot__list a:hover img,.foot__list a:hover svg{transform:scale(1.35) rotate(-8deg)}
+.foot__list a:active img,.foot__list a:active svg{transform:scale(.9)}
+.foot__list a:hover span{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.2em}
+.foot__legal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 16px;padding-top:10px;border-top:1px solid rgba(16,13,9,.12);font-size:.76rem;color:rgba(16,13,9,.66)}
+.foot__legal a{color:inherit;text-underline-offset:.2em;text-decoration-thickness:1px}
+.foot__legal a:hover{color:var(--ink)}
+@media (max-width:760px){
+  .foot{grid-template-columns:minmax(0,1fr)}
+  .foot__list{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px}
+  .foot__list a{min-height:34px;font-size:.88rem}
+  .foot__legal a{padding-block:4px}
+}
+
+/* Terms, refunds, privacy and contact: a title and words to read, nothing else */
+.doc{position:relative;z-index:1;background:var(--paper);color:var(--ink);min-height:72svh;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,4vw,64px);align-items:start;padding:calc(var(--bar) + clamp(24px,5vh,56px)) var(--rail) clamp(48px,8vh,88px)}
+.doc__head{display:grid;gap:12px;position:sticky;top:calc(var(--bar) + 16px)}
+.doc__head .name{font-size:clamp(2.6rem,min(5.2vw,10vh),5.2rem)}
+.doc__head .typed{margin:0}
+.doc__body{max-width:38em;font-size:clamp(1.05rem,1.25vw,1.18rem);line-height:1.5}
+.doc__lead{font-weight:700;margin:0}
+.doc__body h2{margin:1.75em 0 .4em;font:900 clamp(1.3rem,1.9vw,1.65rem)/1.12 var(--text);letter-spacing:-.025em}
+.doc__body p{margin:0}
+.doc__body ul{margin:0;padding-left:1.15em;list-style:disc;display:grid;gap:.4em}
+.doc__body a{color:inherit;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:.16em}
+.doc__body a:hover{color:var(--green-deep)}
+@media (max-width:760px){
+  .doc{grid-template-columns:minmax(0,1fr)}
+  .doc__head{position:static}
+}
+
+/* The page that doesn't exist: the same machine, and it keeps landing on 4 0 4 */
+.lost{position:relative;min-height:100svh;background:var(--green);color:var(--paper);display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:center;gap:clamp(20px,3vw,48px);padding:calc(var(--bar) + 10px) var(--rail) calc(var(--tabs) + 40px);overflow:hidden}
+.lost__say{display:grid;gap:clamp(12px,2vh,20px);justify-items:start}
+.lost .machine{justify-self:end}
+.lost .name{font-size:clamp(2.6rem,min(5.4vw,10vh),5.6rem)}
+.lost .say{margin:0;max-width:24em;min-height:2.8em}
+.machine--lost .reel__strip{top:-25cqh}
+.machine--lost .cell{height:50cqh}
+.machine--lost .cell b{font-size:44cqh;line-height:1}
+.lost.won .btn{animation:winbtn .46s var(--spring) 3}
+@keyframes winbtn{50%{transform:scale(1.1) rotate(-2deg)}}
+@media (max-width:760px){
+  .lost{grid-template-columns:minmax(0,1fr);align-content:center;gap:clamp(14px,2.4vh,24px)}
+  .lost .machine{justify-self:center;width:calc(100% + 2*var(--rail) - 12px);margin-inline:calc(6px - var(--rail))}
+}

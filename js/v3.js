@@ -1,6 +1,9 @@
 (function () {
   'use strict';
   var calm = matchMedia('(prefers-reduced-motion: reduce)').matches, fine = matchMedia('(pointer:fine)').matches;
+  var curtainUp = document.documentElement.classList.contains('curtain-first');
+  addEventListener('curtainup', function () { curtainUp = false; });
+  function afterCurtain(fn) { if (curtainUp) addEventListener('curtainup', fn, { once: true }); else fn(); }
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
   var ease = function (t) { return 1 - Math.pow(1 - t, 3); };
 
@@ -186,7 +189,7 @@
       new IntersectionObserver(function (es) { world.on = es[0].isIntersecting; kick(); }).observe(hero);
     };
     /* Start when all four have loaded, or after 2.5 seconds on a slow connection; a late image resizes itself */
-    var left = els.length, began = false, go = function () { if (began) return; began = true; start(); };
+    var left = els.length, began = false, go = function () { if (began) return; afterCurtain(function () { if (began) return; began = true; start(); }); };
     var one = function () { if (--left <= 0) go(); else if (began) { measure(); kick(); } };
     setTimeout(go, 2500);
     els.forEach(function (p) { if (p.complete && p.naturalWidth) one(); else { p.addEventListener('load', one); p.addEventListener('error', one); } });
@@ -538,4 +541,109 @@
   } catch (e) { /* the page still reads without the dates */ }
   /* a choice and a tick make a small noise too */
   document.querySelectorAll('.pick input,.check input').forEach(function (i) { i.addEventListener('change', function () { tick(i.type === 'checkbox' ? 660 : 500, 0.05, 0.07); }); });
+
+  /* The slot machine: the same one as in the first sentence. Pull the lever and the names land in a new order, and on the third pull the second row is yours. On the page that doesn't exist it keeps landing on 4 0 4, until the third pull pays out */
+  document.querySelectorAll('.machine').forEach(function (machine) {
+    var reels = [].slice.call(machine.querySelectorAll('.reel')), lever = machine.querySelector('.machine__pull');
+    var lost = machine.classList.contains('machine--lost'), lostBox = machine.closest('.lost'), lostSay = lostBox && lostBox.querySelector('[data-lost-say]'), lostLine = lostSay && lostSay.textContent;
+    var rows = +machine.dataset.rows, wordRow = rows === 2 ? 0 : 1, spinning = false, pulls = 0, seen = false, inView = false;
+    var WORDS = machine.dataset.words.split('|');
+    var names = lost ? '4071348529'.split('').map(function (w) { return { word: w }; }) : reels.reduce(function (all, r) { return all.concat([].slice.call(r.querySelectorAll('img'))); }, []).map(function (i) { return { src: i.getAttribute('src'), alt: i.alt, k: i.style.getPropertyValue('--k') }; });
+    function pick() { return names[Math.floor(Math.random() * names.length)]; }
+    function shuffled(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+    function deal(byHand, won) {
+      if (lost) return reels.reduce(function (d, r, i) { return d.concat([pick(), { word: won ? '7' : WORDS[i] }, pick()]); }, []);
+      var landing = byHand || seen ? shuffled(names) : names;
+      return won ? landing.map(function (n, i) { return i % rows === wordRow ? { word: WORDS[(i - wordRow) / rows] } : n; }) : landing;
+    }
+    function cell(n, spare) {
+      var c = document.createElement('div'); c.className = 'cell';
+      if (n.word) { var b = document.createElement('b'); b.textContent = n.word; c.appendChild(b); return c; }
+      var i = new Image(); i.src = n.src; i.alt = spare ? '' : n.alt; i.draggable = false; i.style.setProperty('--k', n.k); c.appendChild(i); return c;
+    }
+    function lay(strip, list) { strip.textContent = ''; list.forEach(function (n) { strip.appendChild(cell(n)); }); }
+    function setP(p) { machine.style.setProperty('--p', p.toFixed(3)); machine.style.setProperty('--b', Math.sin(Math.PI * clamp(p, 0, 1)).toFixed(3)); }
+    var leverAt = 0, leverRun = 0;
+    function moveLever(to, ms, out, done) {
+      var from = leverAt, t0 = performance.now(), run = ++leverRun;
+      (function step(now) {
+        if (run !== leverRun) return;
+        var t = clamp((now - t0) / ms, 0, 1);
+        leverAt = from + (to - from) * out(t); setP(leverAt);
+        if (t < 1) requestAnimationFrame(step); else if (done) done();
+      })(t0);
+    }
+    var inn = function (t) { return t * t; }, recoil = function (t) { return 1 - Math.pow(1 - t, 3) * Math.cos(t * 7); };
+    function paid() {
+      machine.classList.add('won'); setTimeout(function () { machine.classList.remove('won'); }, 2100);
+      [0, 110, 220, 330].forEach(function (d, n) { setTimeout(function () { tick(660 + n * 165, 0.09, 0.16); }, d); });
+      if (lostBox) { lostBox.classList.add('won'); lostSay.textContent = 'Jackpot. You win the home page.'; }
+    }
+    function spin(landing, won) {
+      spinning = true; machine.classList.add('running');
+      if (lostBox) { lostBox.classList.remove('won'); lostSay.textContent = lostLine; }
+      var left = reels.length;
+      reels.forEach(function (reel, i) {
+        var strip = reel.querySelector('.reel__strip'), now = [].slice.call(strip.children), isLast = i === reels.length - 1, step = reels.length > 3 ? 0.55 : 1, spare = Math.round(8 + i * 5 * step) + (won && isLast ? 6 : 0);
+        var top = document.createDocumentFragment();
+        landing.slice(i * rows, i * rows + rows).forEach(function (n) { top.appendChild(cell(n)); });
+        for (var k = 0; k < spare; k++) top.appendChild(cell(pick(), true));
+        strip.insertBefore(top, strip.firstChild);
+        var total = rows + spare + now.length, one = 100 / total, from = -(total - rows) * one, ms = 1050 + i * 420 * step + (won && isLast ? 620 : 0);
+        reel.classList.add('fast');
+        setTimeout(function () { reel.classList.remove('fast'); }, ms * 0.74);
+        var a = strip.animate([
+          { transform: 'translateY(' + from + '%)', easing: 'cubic-bezier(.4,0,.8,.6)' },
+          { transform: 'translateY(' + (from - one * 0.22) + '%)', offset: 0.09, easing: 'cubic-bezier(.3,.62,.3,1)' },
+          { transform: 'translateY(' + (one * 0.11) + '%)', offset: 0.93, easing: 'ease-out' },
+          { transform: 'translateY(0%)' }
+        ], { duration: ms, fill: 'none' });
+        a.onfinish = function () {
+          while (strip.children.length > rows) strip.removeChild(strip.lastChild);
+          tick(1500, 0.07, 0.035);
+          machine.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(2px)' }, { transform: 'translateY(0)' }], { duration: 120, easing: 'ease-out' });
+          if (--left === 0) { spinning = false; machine.classList.remove('running'); if (won) paid(); }
+        };
+      });
+      var clack = setInterval(function () { if (!spinning) return clearInterval(clack); tick(900, 0.018, 0.02); }, 70);
+    }
+    function pull(byHand) {
+      if (spinning) return;
+      if (byHand) pulls++;
+      var won = byHand && pulls % 3 === 0, landing = deal(byHand, won);
+      seen = true;
+      if (calm) {
+        reels.forEach(function (r, i) { lay(r.querySelector('.reel__strip'), landing.slice(i * rows, i * rows + rows)); });
+        if (lostBox) { lostBox.classList.toggle('won', won); lostSay.textContent = won ? 'Jackpot. You win the home page.' : lostLine; }
+        return;
+      }
+      moveLever(1, 150 * (1 - leverAt) + 20, inn, function () {
+        thud(); spin(landing, won);
+        moveLever(0, 620, recoil);
+      });
+    }
+    var start = null;
+    lever.addEventListener('pointerdown', function (e) { if (spinning) return; start = { y: e.clientY, h: machine.offsetHeight * 0.42, moved: 0 }; leverRun++; try { lever.setPointerCapture(e.pointerId); } catch (x) {} });
+    lever.addEventListener('pointermove', function (e) { if (!start) return; var dy = e.clientY - start.y; start.moved = Math.max(start.moved, Math.abs(dy)); leverAt = clamp(dy / start.h, 0, 1); setP(leverAt); });
+    lever.addEventListener('pointerup', function () { if (!start) return; var s = start; start = null; if (s.moved < 8 || leverAt > 0.3) pull(true); else moveLever(0, 380, recoil); });
+    lever.addEventListener('pointercancel', function () { start = null; moveLever(0, 300, ease); });
+    lever.addEventListener('click', function (e) { if (e.detail === 0) pull(true); });
+    if (fine) {
+      lever.addEventListener('pointerenter', function () { if (!spinning && !start) moveLever(0.13, 260, ease); });
+      lever.addEventListener('pointerleave', function () { if (!spinning && !start) moveLever(0, 320, ease); });
+    }
+    if (!calm && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) {
+        if (!es[0].isIntersecting) return;
+        machine.querySelectorAll('img').forEach(function (i) { i.loading = 'eager'; });
+      }, { rootMargin: '1200px 0px' }).observe(machine);
+      if (!lost) { var order = shuffled(names); reels.forEach(function (r, i) { lay(r.querySelector('.reel__strip'), order.slice(i * rows, i * rows + rows)); }); }
+      new IntersectionObserver(function (es) {
+        inView = es[0].isIntersecting;
+        if (inView && !seen) afterCurtain(function () { setTimeout(function () { if (inView && !seen) pull(false); }, 260); });
+      }, { threshold: 0.55 }).observe(machine);
+      /* Until someone pulls it, the lever keeps offering itself */
+      setInterval(function () { if (inView && (lost ? !(lostBox.classList.contains('won')) : !pulls) && !spinning && !start && leverAt < 0.01 && seen) moveLever(0.2, 240, ease, function () { moveLever(0, 520, recoil); }); }, 3800);
+    }
+  });
 })();
