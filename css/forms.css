@@ -1,0 +1,155 @@
+/* The live forms and toys, reskinned. The markup and scripts come verbatim from
+   the live pages, so these selectors are theirs. A form is a lab record you fill in. */
+[hidden]{display:none!important}
+
+.ask-sheet{max-width:820px;margin-inline:auto;font-size:1.02rem}
+.form{margin-top:clamp(20px,3vw,34px);display:grid;gap:clamp(22px,2.6vw,30px)}
+.duo{display:grid;gap:22px}
+@media (min-width:640px){.duo{grid-template-columns:1fr 1fr}}
+.fld{position:relative}
+.fld label:not(.pick label),.fld .lbl{display:block;font:700 1rem/1.25 var(--text);margin-bottom:.35em}
+.fld .hint{font:400 .95rem/1.3 var(--typed);margin-bottom:.5em}
+.fld input:not([type=radio]),.fld textarea{display:block;width:100%;background:transparent;border:0;border-bottom:2px solid var(--ink);border-radius:0;font:400 1.08rem/1.3 var(--typed);color:var(--ink);padding:.5em .1em;transition:background .2s}
+.fld input:focus,.fld textarea:focus{outline:0;background:rgba(245,211,39,.32)}
+.fld input::placeholder,.fld textarea::placeholder{color:rgba(21,17,12,.62)}
+.fld textarea{min-height:128px;resize:vertical;line-height:32px;padding:0 .1em;background-image:repeating-linear-gradient(transparent 0 30.5px,rgba(21,17,12,.28) 30.5px 32px);border-bottom:0}
+.fld input.bad,.fld textarea.bad{border-color:var(--redpen);box-shadow:0 2px 0 var(--redpen)}
+.fld .opt2{margin-top:10px}
+#f.again>.fld:not(.keep),#f.again>.duo~.fld:not(.keep){display:none}
+#f.again #dFluid,#f.again label[for="dFluid"]{display:none}
+
+.socials{display:flex;gap:8px;margin-bottom:6px}
+.soc{width:40px;height:40px;display:grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;transition:transform .2s var(--spring),background .2s}
+.soc:hover{background:var(--sulphur);transform:translateY(-2px)}
+.soc svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8}
+
+/* a choice gets circled in red pen */
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick label{margin:0;padding:.42em .85em .46em;font:500 1rem/1.15 var(--text);border:1.5px solid var(--ink);border-radius:99px;cursor:pointer;transition:transform .18s var(--spring)}
+.pick label:hover{transform:translateY(-2px)}
+.pick input:checked+label{border-color:transparent;font-weight:700;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80' preserveAspectRatio='none'%3E%3Cpath d='M24 46C18 22 66 8 108 8c46 0 86 12 84 36-2 22-62 30-104 28C46 70 6 60 16 36 22 22 48 12 82 10' fill='none' stroke='%23c4190f' stroke-width='5' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.pick input:focus-visible+label{outline:3px solid var(--ink);outline-offset:2px}
+.pick.bad label{border-color:var(--redpen);color:var(--redpen)}
+
+/* a date is a torn calendar leaf */
+.pick-d{gap:10px}
+.pick-d label{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:6px;width:108px;min-height:112px;padding:12px 11px 10px;border:1.5px solid var(--ink);background:#fff;border-radius:12px;font:400 1rem/1 var(--text)}
+.pick-d label:hover{transform:translate(-1px,-3px) rotate(-1deg)}
+.pick-d label s{position:absolute;top:8px;right:9px;text-decoration:none;font:400 .68rem var(--typed)}
+.pick-d label b{font:800 2rem/.9 var(--print);letter-spacing:-.02em}
+.pick-d label u{text-decoration:none;font:700 .72rem/1 var(--typed);text-transform:uppercase;margin-top:-3px}
+.pick-d label em{font:700 .72rem/1.15 var(--typed);font-style:normal;text-transform:uppercase}
+.pick-d label i{font:700 .64rem/1.2 var(--typed);font-style:normal;text-transform:uppercase;color:var(--redpen)}
+.pick-d label i.plain{visibility:hidden}
+.pick-d input:checked+label{background:var(--sulphur);border-color:var(--ink);transform:rotate(-2deg)}
+.pick-d input:disabled+label{opacity:.42;cursor:not-allowed;text-decoration:line-through}
+.more-d{flex:0 0 auto;width:108px;min-height:112px;padding:12px 11px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;border:2px dashed var(--ink);transition:transform .2s var(--spring)}
+.more-d:hover{transform:translateY(-3px)}
+.more-d b{font:800 2rem/.9 var(--print)}
+.more-d u{text-decoration:none;font:700 .72rem var(--typed);text-transform:uppercase}
+
+.talk-wrap{position:relative}
+.mic{position:absolute;right:4px;bottom:6px;width:36px;height:36px;display:grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;background:var(--paper)}
+.mic:hover{background:var(--sulphur)}
+.mic svg{width:17px;height:17px;fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linecap:round}
+.mic.rec{background:var(--bengal)}
+.mic.rec svg{stroke:#fff}
+
+/* a tick is a teacher's tick */
+.checks{display:grid;gap:12px}
+.check{display:flex;gap:12px;align-items:flex-start;cursor:pointer;font:500 1.02rem/1.3 var(--text)}
+.check input{position:absolute;opacity:0}
+.check .box{flex:none;width:26px;height:26px;border:2px solid var(--ink);background:#fff8ea;position:relative}
+.check .box svg{position:absolute;left:-3px;top:-9px;width:36px;height:36px;fill:none;stroke:var(--redpen);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .28s cubic-bezier(.6,.05,.3,1)}
+.check input:checked+.box svg{stroke-dashoffset:0}
+.check input:focus-visible+.box{outline:3px solid var(--ink);outline-offset:2px}
+
+.cta{display:inline-flex;align-items:center;justify-content:center;gap:.5em;background:var(--ink);color:var(--paper);font:800 clamp(1.05rem,1.35vw,1.25rem)/1 var(--print);letter-spacing:-.018em;padding:1em 1.5em;border:0;border-radius:0;text-decoration:none;box-shadow:none;cursor:pointer;transition:background .15s}
+.cta:hover{background:var(--red)}
+.cta:active{transform:scale(.94);transition-duration:.06s}
+.cta[disabled]{opacity:.6}
+.form-note{min-height:1.3em;font:700 1rem/1.3 var(--typed);color:var(--redpen)}
+
+.again-line{margin-top:12px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font:400 .98rem/1.3 var(--typed)}
+.again-btn{font:400 1.3rem/1 var(--hand);color:var(--redpen);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+
+.sent{display:none;text-align:center;padding:18px 0 8px;position:relative}
+.sent.on{display:block}
+.sent .emo{display:none}
+.sent .stamp{margin:0 auto 12px;width:150px;animation:thump .28s cubic-bezier(.2,1.5,.5,1) both}
+.sent h3{font:800 clamp(1.8rem,4vw,2.8rem)/1.05 var(--print)}
+.sent p{margin:12px auto 0;max-width:40ch}
+.sent-door{margin-top:22px}
+@keyframes thump{from{opacity:0;transform:scale(1.7) rotate(-14deg)}to{opacity:1;transform:rotate(-14deg)}}
+
+/* who attends: their physics toy, in print */
+.who{position:relative;margin-top:22px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.who.phys{display:block;overflow:hidden}
+.idc{font:700 clamp(.78rem,2.9vw,.98rem)/1 var(--typed);white-space:nowrap;color:var(--ink);background:var(--paper);border:1.5px solid var(--ink);border-radius:99px;padding:clamp(8px,2.3vw,11px) clamp(12px,3.5vw,17px);box-shadow:0 2px 0 var(--ink);user-select:none}
+.who.phys .idc{position:absolute;top:0;left:0;margin:0;cursor:grab;touch-action:none;will-change:transform;
+  background:color-mix(in oklab,var(--sulphur) calc(var(--g,0)*100%),var(--paper))}
+.who.phys .idc:active{cursor:grabbing}
+.who.phys .idc.lit,.idc:hover{background:var(--sulphur)}
+.ball{display:none;width:60px;height:60px;border-radius:50%}
+.who.phys .ball{display:block;position:absolute;top:0;left:0;z-index:3;pointer-events:none;will-change:transform;background:radial-gradient(circle at 34% 29%,#ffd83a,var(--sun) 58%,#b78f00 100%);box-shadow:0 12px 28px rgba(0,0,0,.5),0 0 0 21px rgba(240,192,0,.06),0 0 54px rgba(240,192,0,.2)}
+.who-hint{font:400 1.4rem/1 var(--hand);color:var(--sun);margin-top:14px;opacity:0;transition:opacity .5s}
+.who.phys~.who-hint{opacity:1}
+.who-hint.gone{opacity:0}
+
+/* what they said: their carousel, as slips of paper */
+.stats{display:grid;gap:18px;margin-top:20px}
+@media (min-width:760px){.stats{grid-template-columns:repeat(3,1fr)}}
+.stats li{padding-top:4px}
+.stats b{display:block;font:800 clamp(3rem,7vw,5.25rem)/.95 var(--print);letter-spacing:-.02em}
+.stats b i{font-style:normal}
+.stats small{font-size:.5em}
+.stats span{display:block;margin-top:8px;font-weight:500;max-width:26ch}
+.said-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px}
+.said-src{font:400 .95rem/1.3 var(--typed)}
+.said-src .short{display:none}
+@media (max-width:640px){.said-src .long{display:none}.said-src .short{display:inline}}
+.said-nav{display:flex;gap:8px;flex:none}
+.said-nav button{width:44px;height:44px;border:2px solid currentColor;border-radius:50%;display:grid;place-items:center;transition:transform .15s}
+.said-nav button:active{transform:scale(.9)}
+.said-nav svg{width:40px;height:40px;overflow:visible}
+.said-nav path{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.said-nav .ring{display:none}
+.qrow{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x proximity;padding:22px var(--rail) 30px;margin:14px calc(var(--rail)*-1) -12px;list-style:none;scrollbar-width:none}
+.qrow::-webkit-scrollbar{display:none}
+.qc{flex:0 0 clamp(250px,70vw,340px);scroll-snap-align:start;scroll-margin-left:var(--rail);background:var(--paper);color:#000;border-radius:14px;padding:20px 20px 16px;box-shadow:0 14px 30px rgba(0,0,0,.28);transition:transform .3s var(--spring);display:flex;flex-direction:column;gap:12px}
+.qc:nth-child(odd){transform:rotate(-1deg)}
+.qc:nth-child(even){transform:rotate(.8deg)}
+.qc q{font:800 clamp(1.15rem,1.7vw,1.4rem)/1.15 var(--print);quotes:"\201C" "\201D"}
+.qc .who{display:block;margin:auto 0 0;font:400 .9rem/1.25 var(--typed)}
+.qc .who b{font-weight:700}
+.qc .got{font:400 1.15rem/1 var(--hand);color:var(--red)}
+.qc .got i{font-style:normal;margin-right:5px}
+.qc .got u,.qc .got span{text-decoration:none;margin-right:6px}
+
+/* questions: their accordions */
+.qgrid{display:grid;gap:0;max-width:900px}
+.qgrid details{border-top:2px solid currentColor}
+.qgrid details:last-child{border-bottom:2px solid currentColor}
+.qgrid summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:18px;align-items:baseline;padding:.8em 0;font:800 clamp(1.25rem,2.2vw,1.8rem)/1.12 var(--print)}
+.qgrid summary::-webkit-details-marker{display:none}
+.qgrid .pm{font:400 1.3em/1 var(--text);transition:transform .25s var(--spring)}
+.qgrid details[open] .pm{transform:rotate(45deg)}
+.qgrid .ans{padding:0 0 1.1em;max-width:58ch}
+
+/* the bar that follows you on a phone */
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--deep);color:var(--paper);transform:translateY(110%);transition:transform .35s var(--ease)}
+.sticky.on{transform:none}
+.sticky .when{font:700 .95rem/1.1 var(--typed);text-transform:uppercase}
+.sticky .cta{font-size:1.02rem;padding:.7em 1.1em;box-shadow:none}
+@media (min-width:900px){.sticky{display:none}}
+
+/* the date row in a Build Club hero */
+.away{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px}
+.away-lead{font:700 .9rem/1 var(--typed);text-transform:uppercase;width:100%}
+.cap{display:inline-flex;flex-direction:column;gap:3px;padding:.6em 1em;text-decoration:none;background:rgba(253,248,240,.16);color:var(--paper);border-radius:14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:transform .25s var(--spring),background .2s}
+.cap:hover{transform:translateY(-3px);background:rgba(253,248,240,.28)}
+.cap:active{transform:scale(.95)}
+.cap b{font:800 1.05rem/1 var(--print)}
+.cap em{font:700 .72rem/1 var(--typed);font-style:normal;text-transform:uppercase}
+.rv{opacity:1}
