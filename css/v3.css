@@ -572,3 +572,8 @@ html{scroll-snap-type:y proximity}
 
 /* First-screen objects stay hidden and small until the script has sized them, so nothing flashes huge on a slow connection */
 .js .thing{visibility:hidden;width:1.2em;height:1.2em}
+
+/* Short phones: the brand paragraph gets the whole screen */
+@media (max-width:820px) and (max-height:700px){.why__text{font-size:min(5.3vw,3.05svh)}.flaskwrap{display:none}}
+.why__text{line-height:1.2}
+.flaskwrap{bottom:calc(var(--tabs) + 2px);right:calc(var(--rail) - 14px)}
