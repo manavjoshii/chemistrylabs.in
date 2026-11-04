@@ -487,7 +487,7 @@
     var cal = document.querySelector('[data-calendar]');
     if (cal && CITY) {
       var SYM = { Ahmedabad: 'Ah', Mumbai: 'Mu', Jaipur: 'Ja', Surat: 'Su', content: 'Fc', gtm: 'Gt', capital: 'Rc', app: 'Vb', pricing: 'Pr', hiring: 'Hi' };
-      var COL = { club: ['var(--sun)', 'var(--ink)'], practical: ['var(--flame)', 'var(--ink)'], vc: ['var(--copper)', 'var(--paper)'], re: ['var(--litmus)', 'var(--ink)'] };
+      var COL = { club: ['var(--sun)', 'var(--ink)'], practical: ['var(--pink)', 'var(--ink)'], vc: ['var(--copper)', 'var(--paper)'], re: ['var(--sky)', 'var(--ink)'] };
       var POS = [[1, 1], [1, 2], [2, 2], [7, 2], [8, 2], [1, 3], [2, 3], [7, 3], [8, 3], [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [8, 4]];
       var els = [];
       sundaysFrom(13).forEach(function (d) { var cs = citiesOn(d); if (cs.length) els.push({ d: d, kind: 'club', s: SYM[cs[0]] || cs[0].slice(0, 2), name: 'Build Club', sub: cs.join(' & ') + ', 10 AM', href: '/build-club/#apply', first: cs[0] }); });
