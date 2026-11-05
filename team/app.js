@@ -376,7 +376,7 @@ const PAGES = {
       <div class="chips" data-send>${[["off", "Off"], ["manav", "Only me"], ["team", "Whole team"]].map(([k, l]) => `<button type="button" class="${s.mode === k ? "on" : ""}" data-mode="${k}">${l}</button>`).join("")}</div>
       <p class="t-sub" style="margin:-8px 0 16px">Meta's approval of the message: ${esc(String(s.template).toLowerCase())}. Nothing sends between 10pm and 8am.</p>` : "";
     const when = (x) => x.due ? (x.late ? "was due " : "by ") + day(x.due) : "no date yet";
-    return `<div class="icon">🧑‍🤝‍🧑</div><h2>Team</h2>${sw}${rows((D.team || []).map((t) => `<li style="align-items:flex-start"><span class="txt"><b style="font-weight:600">${esc(t.name)}</b> <span class="chip ${esc(t.status.replace(/\s+/g, "-"))}">${esc(t.status)}</span>
+    return `<div class="icon">🧑‍🤝‍🧑</div><h2>Team</h2>${sw}${(D.team || []).some((t) => !t.account) ? `<div class="acts" style="margin:0 0 10px"><button class="btn small green" data-links>Copy all sign-in links</button></div><p class="t-sub" data-links-out style="margin:0 0 16px;overflow-wrap:anywhere;white-space:pre-line"></p>` : ""}${rows((D.team || []).map((t) => `<li style="align-items:flex-start"><span class="txt"><b style="font-weight:600">${esc(t.name)}</b> <span class="chip ${esc(t.status.replace(/\s+/g, "-"))}">${esc(t.status)}</span>
       <span class="meta">${esc(t.title)} · ${esc(t.label || "")}</span>
       <details class="fold" style="border:0;padding:8px 0 0"><summary>What's on their dashboard</summary>
         ${t.empty ? `<p>${esc(t.empty)}</p>` : ""}${t.breakdown.map((x) => `<p>${esc(x)}</p>`).join("")}
@@ -555,6 +555,20 @@ function wirePage(page, close, paint) {
     if (n) { await api("/api/founders", { names: [...D.attend.founders, n] }); attendSaved(); }
   };
   page.querySelectorAll("[data-unfounder]").forEach((b) => b.onclick = async () => { await api("/api/founders", { names: D.attend.founders.filter((x) => x !== b.dataset.unfounder) }); attendSaved(); });
+
+  /* Every link at once, one line per person, for him to send one by one. */
+  const allLinks = page.querySelector("[data-links]");
+  if (allLinks) allLinks.onclick = async () => {
+    const out = page.querySelector("[data-links-out]");
+    try {
+      const lines = [];
+      for (const t of D.team.filter((x) => !x.account)) lines.push(`${t.name}: ${(await api("/api/link", { handle: t.handle })).url}`);
+      const text = lines.join("\n");
+      let copied = false;
+      try { await navigator.clipboard.writeText(text); copied = true; } catch {}
+      out.textContent = copied ? `Copied ${lines.length} links, one line per person. Send each person only their own.` : text;
+    } catch (e) { out.textContent = e.message; }
+  };
 
   /* The sign-in link: copied for him to send. If the browser won't copy, it's shown. */
   page.querySelectorAll("[data-link]").forEach((b) => b.onclick = async () => {
