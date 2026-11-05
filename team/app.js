@@ -231,6 +231,16 @@ function crmTile() {
     <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Open the CRM ↗</span><span class="t-sub">${c.admin ? "Admin" : "Your CRM access"}</span></a>`;
 }
 
+/* What people did on the website this week, and the one thing most worth doing about it. */
+function websiteTile() {
+  const w = D.website; if (!w) return "";
+  const top = (w.learnings || [])[0];
+  const line = top ? top.text : w.collecting ? `The first reading comes at ${w.firstReading} people. ${int(w.soFar)} so far.` : "Nothing needs attention.";
+  return `<button class="tile w4 website" data-open="website" aria-label="Website this week"><span class="t-label"><em>🔭</em>Website this week</span>
+    <span class="web-nums"><span><b class="t-mid">${int(w.people)}</b><small>people</small></span><span><b class="t-mid">${int(w.started)}</b><small>started a form</small></span><span><b class="t-mid">${int(w.applied)}</b><small>applied</small></span></span>
+    <span class="t-sub web-line${top && top.rank === 1 ? " web-bad" : ""}">${esc(line)}</span></button>`;
+}
+
 const addTile = () => `<button class="tile round add" data-open="add" aria-label="Add">+</button>`;
 
 /* ── the home screen ───────────────────────────────────────────────────── */
@@ -238,7 +248,7 @@ function draw() {
   const d = D, owner = d.me.owner;
   const calJobs = (d.jobs || []).every((j) => j.needs === "calendar");
   const tiles = owner
-    ? [peopleTile(), revenueTile(), alarmTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), crmTile(), comingTile(false), addTile()]
+    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), crmTile(), comingTile(false), addTile()]
     : d.cal
       ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), calJobs ? "" : jobTile(), comingTile(calJobs), addTile()]
       : [peopleTile(), mineTile(), alarmTile(), stepsTile(true), roomTile(), d.myProjects?.length ? projectsTile() : "", crmTile(), jobTile(), comingTile(!d.jobs?.length), addTile()];
@@ -384,6 +394,21 @@ const PAGES = {
       ${d.slot && !posts.length ? `<p class="t-sub">An empty slot stays empty until there's a real post for it.</p>` : ""}`;
   },
   add() { return `<div class="icon">＋</div><h2>Add</h2><div id="addbody"></div>`; },
+  website() {
+    const w = D.website || {}, r = w.room || {}, l = w.learnings || [];
+    return `<div class="icon">🔭</div><h2>Website</h2>
+      <p class="web-from">Last 7 days. ${int(w.people)} people, ${int(w.peoplePrev)} the week before. Read fresh every 30 minutes.</p>
+      <h3 class="web-h">What to do</h3>
+      ${l.length ? `<ol class="web-todo">${l.map((x) => `<li class="${x.rank === 1 ? "web-bad" : ""}"><b>${esc(x.text)}</b><span>${esc(x.action)}</span></li>`).join("")}</ol>`
+        : `<p class="web-from">${w.collecting ? `Nothing to conclude yet. ${int(w.soFar)} people in the last 14 days, and the first reading comes at ${w.firstReading}.` : "Nothing needs attention."}</p>`}
+      <h3 class="web-h">From website to room, all time</h3>
+      <p class="web-from">${int(r.applied)} applied, ${int(r.invited)} invited, ${int(r.paid)} paid, ${int(r.came)} came.</p>
+      <h3 class="web-h">Where people came from</h3>
+      ${(w.sources || []).length ? `<ul class="web-src">${w.sources.map((s) => `<li><span>${esc(s.name)}</span><span>${int(s.people)} people, ${int(s.applied)} applied</span></li>`).join("")}</ul>` : `<p class="web-from">Nothing yet.</p>`}
+      <h3 class="web-h">Everything else</h3>
+      <div class="web-ranges">${[[1, "Today"], [7, "7 days"], [30, "30 days"], [90, "90 days"]].map(([d, t]) => `<button data-report="${d}">${t}</button>`).join("")}</div>
+      <p class="web-from" id="webstatus"></p><iframe id="webframe" class="web-frame" title="Full website report" sandbox hidden></iframe>`;
+  },
 };
 
 function open(name, from, arg) {
@@ -398,6 +423,12 @@ function open(name, from, arg) {
     page.innerHTML = `<div class="grab"></div>${PAGES[name](arg)}`;
     wirePage(page, close, paint);
     if (name === "add") addForm(page, close);
+    page.querySelectorAll("[data-report]").forEach((b) => b.addEventListener("click", async () => {
+      const f = $("#webframe", page), st = $("#webstatus", page);
+      st.textContent = "Loading…";
+      try { const { html } = await api("/api/website?d=" + b.dataset.report); f.srcdoc = html; f.hidden = false; st.textContent = ""; }
+      catch (e) { st.textContent = e.message; }
+    }));
   };
   document.addEventListener("keydown", onKey);
   scrim.onclick = close;
@@ -512,6 +543,8 @@ function addForm(page, close) {
 async function refresh() { try { D = await api("/api/board"); draw(); } catch (e) { if (e.message !== "signed out") console.error(e); } }
 function load() {
   if (!store.get()) return login();
+  /* Anyone signed in here is on the team, so the website stops counting this browser as a visitor. Same origin as chemistrylabs.in. */
+  try { localStorage.setItem("cl-off", "1"); } catch {}
   app.innerHTML = `<div class="wall"></div>`;
   refresh();
 }
