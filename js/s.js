@@ -3,8 +3,8 @@
    which the collector turns into a keyed hash and never stores.
    Open any page with ?cl-me=1 to switch this off on your own device, ?cl-me=0 to undo. */
 (function () {
-  var GA = '';       // Google Analytics measurement ID, G-XXXXXXXXXX
-  var CLARITY = '';  // Microsoft Clarity project ID
+  var GA = 'G-L1BGC45RJ5';  // Google Analytics measurement ID
+  var CLARITY = 'z8sy9me8i4';  // Microsoft Clarity project ID
 
   var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   var URL_E = local ? 'http://localhost:8787/e' : 'https://cl-signal.manavjoshi01.workers.dev/e';
@@ -187,17 +187,19 @@
     }, 120);
   }, true);
 
-  /* An application. The page's own sendBeacon goes out exactly as it did; this only reads it. */
-  if (beacon) navigator.sendBeacon = function (u, data) {
+  /* An application. The page's own send goes out exactly as it did; this only reads it. */
+  function receipt(u, data) {
     try {
-      if (/script\.google\.com/.test(String(u)) && data instanceof URLSearchParams && data.get('phone')) {
+      if (!applied && /script\.google\.com/.test(String(u)) && data instanceof URLSearchParams && data.get('phone')) {
         applied = true;
-        send('apply', { first: JSON.parse(first).src, src: from.src, f: data.get('form') || '', again: data.get('returning') || '', date: data.get('date') || '', _p: String(data.get('phone')).replace(/\D/g, '') });
+        send('apply', { first: JSON.parse(first).src, src: from.src, f: data.get('form') || data.get('step') || '', again: data.get('returning') || '', date: data.get('date') || '', _p: String(data.get('phone')).replace(/\D/g, '') });
         flush();
       }
     } catch (e) {}
-    return beacon(u, data);
-  };
+  }
+  if (beacon) navigator.sendBeacon = function (u, data) { receipt(u, data); return beacon(u, data); };
+  var realFetch = window.fetch;
+  if (realFetch) window.fetch = function (u, o) { receipt(u, o && o.body); return realFetch.apply(this, arguments); };
 
   /* Things breaking. */
   addEventListener('error', function (ev) { if (ev.message) send('err', { m: String(ev.message).slice(0, 160), at: String(ev.filename || '').split('/').pop() + ':' + (ev.lineno || 0) }); });
@@ -231,6 +233,7 @@
   /* Outside tools load once the page has finished, so they never slow the first screen. */
   function outside() {
     document.querySelectorAll('form').forEach(function (f) { f.setAttribute('data-clarity-mask', 'true'); });
+    if (!/chemistrylabs\.in$/.test(location.hostname)) return;
     if (GA) {
       window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); };
       gtag('js', new Date()); gtag('config', GA, { client_id: vid });
