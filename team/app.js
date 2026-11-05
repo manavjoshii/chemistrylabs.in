@@ -232,6 +232,14 @@ function postCard(p) {
       <button class="linkish" data-act="${p.stage > 0 ? "back" : "remove"}">${p.stage > 0 ? "Undo last stage" : "Remove"}</button></div></div>`;
 }
 
+/* Catalyst attendance: tap who came, after each session. */
+function attendTile() {
+  const a = D.attend; if (!a) return "";
+  const last = a.sessions[0];
+  return `<button class="tile w2" data-open="attend"><span class="t-label"><em>🚀</em>Catalyst attendance</span><span class="spacer"></span>
+    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Tick who came</span><span class="t-sub">${last ? `Last: ${esc(last.label)}, ${last.came.length} of ${last.due.length}` : "No session yet"}</span></button>`;
+}
+
 function crmTile() {
   const c = D.crm; if (!c) return "";
   /* Opens the CRM already signed in: the CRM takes the same token from #key=. */
@@ -256,12 +264,12 @@ const addTile = () => `<button class="tile round add" data-open="add" aria-label
 function draw() {
   const d = D, owner = d.me.owner;
   const tiles = owner
-    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), crmTile(), comingTile(false), addTile()]
+    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), attendTile(), crmTile(), comingTile(false), addTile()]
     : d.me.external
       ? [mineTile(), alarmTile(), calTile(false), jobTile(), stepsTile(true)]
     : d.cal
       ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), jobTile(), comingTile(false), addTile()]
-      : [peopleTile(), mineTile(), alarmTile(), stepsTile(true), roomTile(), d.myProjects?.length ? projectsTile() : "", crmTile(), jobTile(), comingTile(!d.jobs?.length), addTile()];
+      : [peopleTile(), mineTile(), alarmTile(), attendTile(), stepsTile(true), roomTile(), d.myProjects?.length ? projectsTile() : "", crmTile(), jobTile(), comingTile(!d.jobs?.length), addTile()];
   app.innerHTML = `<div class="wall"></div><div class="screen">
     <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
       <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b></div></header>
@@ -318,6 +326,7 @@ const PAGES = {
     return `<div class="icon">👥</div><h2>People in rooms</h2><dl class="props">
       ${prop("🗓️ Month", esc(m.name))}
       ${prop("✔︎ In rooms so far", int(c.done))}
+      ${c.online ? prop("🚀 Of those, online Catalyst", int(c.online)) : ""}
       ${prop("🎟 Booked ahead", int(c.booked))}
       ${prop("〰 Likely from invites", c.likely ? "~" + int(c.likely) : "0")}
       ${prop("➜ Heading for", int(c.forecast), goodBad(c))}
@@ -371,7 +380,7 @@ const PAGES = {
       <span class="meta">${esc(t.title)} · ${esc(t.label || "")}</span>
       <details class="fold" style="border:0;padding:8px 0 0"><summary>What's on their dashboard</summary>
         ${t.empty ? `<p>${esc(t.empty)}</p>` : ""}${t.breakdown.map((x) => `<p>${esc(x)}</p>`).join("")}
-        ${t.reading.grace != null && t.reading.dark >= t.reading.grace ? `<p class="bad">No reading for ${t.reading.dark} days. ${esc(t.reading.why)} ${esc(t.reading.fallback)}</p>` : t.reading.of ? `<p>Measured on ${t.reading.read} of the last ${t.reading.of} days.</p>` : ""}
+        ${t.reading.held ? `<p>Alarm held until ${esc(day(t.reading.held))}.</p>` : t.reading.grace != null && t.reading.dark >= t.reading.grace ? `<p class="bad">No reading for ${t.reading.dark} days. ${esc(t.reading.why)} ${esc(t.reading.fallback)}</p>` : t.reading.of ? `<p>Measured on ${t.reading.read} of the last ${t.reading.of} days.</p>` : ""}
         ${t.flags.length ? `<p class="block-h">Warnings</p>${rows(t.flags.map((f) => `<li><span class="txt ${f.late ? "bad" : ""}">${esc(f.text)}</span></li>`), "")}` : ""}
         ${t.steps.length ? `<p class="block-h">Steps</p>${rows(t.steps.map((x) => `<li><span class="txt">${esc(x.title)}<span class="meta ${x.late ? "bad" : ""}">${esc(x.project)} · ${when(x)}</span></span></li>`), "")}` : ""}
         ${t.jobs.length ? `<p class="block-h">Job list</p>${rows(t.jobs.map((j) => `<li><span class="chip">${j.check === "auto" ? "auto" : "them"}</span><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : j.check === "auto" ? "Not read yet" : "The hub can't read this one"}</span></span></li>`), "")}` : ""}
@@ -379,6 +388,21 @@ const PAGES = {
         <p class="t-sub" data-linked="${esc(t.handle)}" style="margin-left:0;overflow-wrap:anywhere"></p>
       </details></span>
       <span class="num-r">${t.value != null ? int(t.value) + (t.unit === "%" ? "%" : "") + (t.target ? `<small>of ${int(t.target)}${t.unit === "%" ? "%" : ""}</small>` : "") : "—"}${t.money != null ? `<small>${secret(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
+  },
+  attend() {
+    const a = D.attend;
+    return `<div class="icon">🚀</div><h2>Catalyst attendance</h2>
+      <form data-session>
+        <label class="f"><span>Session day</span><input name="day" type="date" value="${esc(a.today)}" required></label>
+        <p class="block-h">Who came</p>
+        <div class="chips" data-came>${a.founders.map((n) => `<button type="button" data-name="${esc(n)}">${esc(n)}</button>`).join("") || `<span class="t-sub">Add the founders below first.</span>`}</div>
+        <button class="btn green" type="submit">Save this session</button></form>
+      <p class="block-h">Past sessions</p>
+      ${rows(a.sessions.map((s) => `<li><span class="txt">${esc(s.label)}<span class="meta">${s.due.filter((n) => !s.came.includes(n)).length ? "Missed: " + esc(s.due.filter((n) => !s.came.includes(n)).join(", ")) : "Everyone came"}</span></span><span class="num-r">${s.came.length}<small>of ${s.due.length}</small></span><button class="linkish" data-unsession="${esc(s.day)}">Remove</button></li>`), "No session ticked yet.")}
+      <p class="block-h">Founders</p>
+      ${rows(a.founders.map((n) => `<li><span class="txt">${esc(n)}</span><button class="linkish" data-unfounder="${esc(n)}">Remove</button></li>`), "No founders yet.")}
+      <form class="inline" data-founder style="margin-top:10px"><input name="n" placeholder="Add a founder" aria-label="Add a founder"><button class="btn small green" type="submit">Add</button></form>
+      <p class="t-sub" data-attend-msg style="margin-top:10px"></p>`;
   },
   projects() {
     const ps = D.me.owner ? D.projects || [] : D.myProjects || [];
@@ -512,6 +536,26 @@ function wirePage(page, close, paint) {
     try { await api("/api/step", { id: Number(li.dataset.step), done: true }); setTimeout(() => { li.remove(); refresh(); }, motion ? 850 : 0); }
     catch (e) { b.classList.remove("on"); li.classList.remove("leaving"); alert(e.message); }
   });
+  /* Attendance: chips toggle, the list on save becomes that session's own record. */
+  const attendSaved = () => { close(); refresh(); };
+  page.querySelectorAll("[data-came] [data-name]").forEach((b) => b.onclick = () => b.classList.toggle("on"));
+  const sess = page.querySelector("[data-session]");
+  if (sess) sess.onsubmit = async (e) => {
+    e.preventDefault();
+    const msg = page.querySelector("[data-attend-msg]");
+    const came = [...page.querySelectorAll("[data-came] .on")].map((b) => b.dataset.name);
+    try { await api("/api/session", { day: new FormData(sess).get("day"), came, due: D.attend.founders }); attendSaved(); }
+    catch (err) { msg.textContent = err.message; }
+  };
+  page.querySelectorAll("[data-unsession]").forEach((b) => b.onclick = async () => { await api("/api/session", { day: b.dataset.unsession, remove: true }); attendSaved(); });
+  const addF = page.querySelector("[data-founder]");
+  if (addF) addF.onsubmit = async (e) => {
+    e.preventDefault();
+    const n = String(new FormData(addF).get("n") || "").trim();
+    if (n) { await api("/api/founders", { names: [...D.attend.founders, n] }); attendSaved(); }
+  };
+  page.querySelectorAll("[data-unfounder]").forEach((b) => b.onclick = async () => { await api("/api/founders", { names: D.attend.founders.filter((x) => x !== b.dataset.unfounder) }); attendSaved(); });
+
   /* The sign-in link: copied for him to send. If the browser won't copy, it's shown. */
   page.querySelectorAll("[data-link]").forEach((b) => b.onclick = async () => {
     const out = page.querySelector(`[data-linked="${b.dataset.link}"]`);
