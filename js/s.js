@@ -137,7 +137,7 @@
     var el = t.closest(HIT), d = { y: Math.round(((ev.pageY || 0) / Math.max(1, document.documentElement.scrollHeight)) * 100) };
     var form = t.closest('form');
     if (el && form && !(el.matches('button[type=submit],input[type=submit]'))) {
-      d.l = '[form field] ' + (el.id || el.name || el.getAttribute('for') || el.tagName.toLowerCase()); d.k = 'field';
+      var ctl = el.tagName === 'LABEL' ? (el.control || el) : el; d.l = '[form field] ' + fname(ctl); d.k = 'field';
     } else if (el) {
       d.l = text(el) || classOf(el) || el.tagName.toLowerCase(); d.k = el.tagName.toLowerCase();
       if (el.tagName === 'A' && el.href) {
@@ -165,7 +165,7 @@
 
   /* Forms. Field names and timing only. */
   var began = {}, lastField = {}, entered = {}, applied = false, tried = 0;
-  function fname(el) { return el.id || el.name || el.tagName.toLowerCase(); }
+  function fname(el) { return el.type === 'radio' ? el.name : el.id || el.name || el.tagName.toLowerCase(); }
   function fid(el) { var f = el.closest('form'); return f ? (f.id || f.getAttribute('name') || 'form') : ''; }
   addEventListener('focusin', function (ev) {
     var f = fid(ev.target); if (!f || !ev.target.matches('input,select,textarea')) return;
