@@ -548,12 +548,15 @@
     var lost = machine.classList.contains('machine--lost'), lostBox = machine.closest('.lost'), lostSay = lostBox && lostBox.querySelector('[data-lost-say]'), lostLine = lostSay && lostSay.textContent;
     var rows = +machine.dataset.rows, wordRow = rows === 2 ? 0 : 1, spinning = false, pulls = 0, seen = false, inView = false;
     var WORDS = machine.dataset.words.split('|');
-    var names = lost ? '4071348529'.split('').map(function (w) { return { word: w }; }) : reels.reduce(function (all, r) { return all.concat([].slice.call(r.querySelectorAll('img'))); }, []).map(function (i) { return { src: i.getAttribute('src'), alt: i.alt, k: i.style.getPropertyValue('--k') }; });
+    var names = lost ? '4071348529'.split('').map(function (w) { return { word: w }; }) : reels.reduce(function (all, r) { return all.concat([].slice.call(r.querySelectorAll('img'))); }, []).map(function (i) { return { src: i.getAttribute('src'), alt: i.alt, k: i.style.getPropertyValue('--k'), pin: false }; });
+    var slots = reels.length * rows;
+    /* more names than windows: a random set of them fills the windows each deal */
+    function fit(a, keep) { if (a.length <= slots) return a; var pinned = a.filter(function (n) { return n.pin; }), rest = shuffled(a.filter(function (n) { return !n.pin; })); var pick12 = pinned.concat(rest).slice(0, slots); return keep ? pick12 : shuffled(pick12); }
     function pick() { return names[Math.floor(Math.random() * names.length)]; }
     function shuffled(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
     function deal(byHand, won) {
       if (lost) return reels.reduce(function (d, r, i) { return d.concat([pick(), { word: won ? '7' : WORDS[i] }, pick()]); }, []);
-      var landing = byHand || seen ? shuffled(names) : names;
+      var landing = fit(names, !(byHand || seen));
       return won ? landing.map(function (n, i) { return i % rows === wordRow ? { word: WORDS[(i - wordRow) / rows] } : n; }) : landing;
     }
     function cell(n, spare) {
@@ -637,7 +640,7 @@
         if (!es[0].isIntersecting) return;
         machine.querySelectorAll('img').forEach(function (i) { i.loading = 'eager'; });
       }, { rootMargin: '1200px 0px' }).observe(machine);
-      if (!lost) { var order = shuffled(names); reels.forEach(function (r, i) { lay(r.querySelector('.reel__strip'), order.slice(i * rows, i * rows + rows)); }); }
+      if (!lost) { var order = fit(names); reels.forEach(function (r, i) { lay(r.querySelector('.reel__strip'), order.slice(i * rows, i * rows + rows)); }); }
       new IntersectionObserver(function (es) {
         inView = es[0].isIntersecting;
         if (inView && !seen) afterCurtain(function () { setTimeout(function () { if (inView && !seen) pull(false); }, 260); });
