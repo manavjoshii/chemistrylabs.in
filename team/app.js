@@ -8,6 +8,11 @@ const store = {
   get: () => { try { return localStorage.getItem(KEY) || ""; } catch { return ""; } },
   set: (v) => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch {} },
 };
+/* A sign-in link from Manav: #key=… signs them in, then leaves the address bar. */
+{
+  const m = location.hash.match(/key=([^&]+)/);
+  if (m) { store.set(decodeURIComponent(m[1])); history.replaceState(null, "", location.pathname); }
+}
 const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
 let D = null, firstPaint = true;
 
@@ -40,7 +45,7 @@ document.addEventListener("click", (e) => {
 }, true);
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const day = (d) => { const t = new Date(d + "T00:00:00Z"); return `${WD[t.getUTCDay()]} ${t.getUTCDate()} ${MO[t.getUTCMonth()]}`; };
-const ICON = { Founder: "🎯", WhatsApp: "💬", Practicals: "🧪", "Fashion accelerator": "👗", "Social media": "📸", "Creative communication": "🎨", Design: "✏️" };
+const ICON = { Founder: "🎯", "CRM and WhatsApp": "💬", Practicals: "🧪", "Venture Catalyst": "🚀", "Fashion accelerator and creative QC": "👗", "Social media and creative ops": "📸", "Creative agency": "🎨" };
 const iconOf = (title) => ICON[title] || "🎯";
 
 /* On chemistrylabs.in/team the page is static and the hub runs on Cloudflare. */
@@ -58,7 +63,7 @@ async function api(path, body) {
 function login(msg = "") {
   app.innerHTML = `<div class="wall"></div><div class="screen"><form class="login" id="login">
     <h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
-    <p>Sign in with your CRM account.</p>
+    <p>Sign in with your CRM account. No account? Open the link Manav sent you.</p>
     <label class="f"><span>Handle</span><input name="handle" autocomplete="username" autocapitalize="none" required></label>
     <label class="f"><span>Password</span><input name="pw" type="password" autocomplete="current-password" required></label>
     <p class="err">${esc(msg)}</p><button class="btn green" type="submit">Sign in</button></form></div>`;
@@ -111,12 +116,15 @@ const revenueTile = () => {
 };
 
 function mineTile() {
-  const m = D.mine; if (!m) return "";
+  const m = D.mine; if (!m || m.none) return "";
   const icon = iconOf(D.me.title);
   if (m.value == null) return beaker({ open: "mine", icon, label: m.label, value: null, done: 0, idle: true, sub: esc(m.empty || "") });
   if (m.unit === "steps") return `<button class="tile w2 h2" data-open="mine"><span class="t-label"><em>${icon}</em>${esc(m.label)}</span><span class="spacer"></span>
     <span style="align-self:center">${ring(m.value, m.target, `${m.value}/${m.target}`, true)}</span><span class="spacer"></span>
     <span class="t-sub">${m.empty ? esc(m.empty) : `${m.target - m.value} to go`}</span></button>`;
+  if (m.unit === "days" && !m.rooms && m.target) return `<button class="tile w2 h2" data-open="mine"><span class="t-label"><em>${icon}</em>${esc(m.label)}</span><span class="spacer"></span>
+    <span style="align-self:center">${ring(m.value, m.target, `${m.value}/${m.target}`, true)}</span><span class="spacer"></span>
+    <span class="t-sub">${m.target - m.value ? `${m.target - m.value} slipped this month` : "Nothing slipped this month"}</span></button>`;
   if (m.unit === "days") return beaker({ open: "mine", icon, label: m.label, value: m.value, done: m.value ?? 0, target: m.target,
     sub: m.value == null ? esc(m.empty || "") : m.value >= 3 ? "days to spare · well done" : m.value >= 2 ? "days to spare · on target" : "days to spare · late" });
   if (m.unit === "%") return beaker({ open: "mine", icon, label: m.label, value: m.value, pct: true, done: m.value, target: m.target,
@@ -196,20 +204,21 @@ const cap = (s) => String(s || "").charAt(0).toUpperCase() + String(s || "").sli
 const days = (n) => (n >= 28 ? "28+" : n);
 function calTile(strip) {
   const c = D.cal; if (!c) return "";
-  const st = c.state, warn = st.planned < 14 || st.ready < 7 || st.waiting;
+  const st = c.state, warn = st.flagged;
   const cells = c.days.map((d) => {
     const k = d.stage < 0 ? 0 : (d.stage + 1) / 5, gap = d.slot && d.stage < 0;
     return `<button class="vial ${gap ? "gap" : ""} ${d.stage === 4 ? "done" : ""}" data-day="${d.day}" aria-label="${esc(d.label)}${d.slot ? ", slot " + d.slot : ""}${d.count ? ", " + d.count + " post" + (d.count > 1 ? "s" : "") : gap ? ", empty slot" : ""}">
       <i class="v-fill" style="--k:${k}"></i>${d.slot ? '<i class="v-slot"></i>' : ""}<b>${d.date}</b>${strip ? "" : `<small>${d.dow}</small>`}${d.count > 1 ? `<em>${d.count}</em>` : ""}</button>`;
   }).join("");
   return `<div class="tile w4 ${strip ? "strip" : "h2"} cal"><span class="t-label"><em>🗓️</em>Calendar
-    <span class="cal-sum ${warn ? "warn" : ""}">${days(st.planned)}d planned · ${days(st.ready)}d ready${st.waiting ? ` · ${st.waiting} waiting` : ""}</span></span>
+    <span class="cal-sum ${warn ? "warn" : ""}">${st.filled} of ${st.slots} slots planned · ${st.ready} ready${st.waiting ? ` · ${st.waiting} waiting` : ""}</span></span>
     <div class="vials">${cells}</div></div>`;
 }
 
-const STAGE_WHO = { "dev+keshika": "Dev + Keshika", editor: "the editor", asiya: "Asiya" };
+const STAGE_WHO = { agency: "the agency", creative: "the creative check" };
 function postCard(p) {
   const S = D.cal.stages, next = S[p.stage + 1];
+  const canCheck = D.me.owner || D.me.qc, atCheck = p.stage === 2;
   const nextWho = !next ? "" : next.owner === "shooter"
     ? (p.shooter === "pro" ? "the photo-video person" : p.shooter ? cap(p.shooter) : "whoever's in the room")
     : STAGE_WHO[next.owner] || cap(next.owner);
@@ -217,7 +226,7 @@ function postCard(p) {
     <div class="post-h"><span class="chip">${esc(cap(p.format))}</span>${p.time ? `<span class="t-sub">${esc(p.time)}</span>` : ""}</div>
     <p class="post-idea">${esc(p.idea || "Untitled")}</p>
     <div class="stepper">${S.map((s, i) => `<span class="${i <= p.stage ? "on" : ""} ${i === p.stage ? "now" : ""}"><i></i><small>${esc(s.label)}</small></span>`).join("")}</div>
-    ${next ? `<div class="post-act"><button class="btn green small" data-act="advance">${esc(next.act)}</button>${p.stage === 2 ? `<button class="btn ghost small" data-act="reject">Needs changes</button>` : `<span class="t-sub">${esc(cap(nextWho))}'s turn</span>`}</div>` : `<p class="t-sub" style="margin:10px 0 0">Posted ✓</p>`}
+    ${!next ? `<p class="t-sub" style="margin:10px 0 0">Posted ✓</p>` : atCheck && !canCheck ? `<p class="t-sub" style="margin:10px 0 0">Waiting for the creative check</p>` : `<div class="post-act"><button class="btn green small" data-act="advance">${esc(next.act)}</button>${atCheck ? `<button class="btn ghost small" data-act="reject">Needs changes</button>` : `<span class="t-sub">${esc(nextWho === STAGE_WHO.creative ? "Then the creative check" : cap(nextWho) + "'s turn")}</span>`}</div>`}
     ${p.backs ? `<p class="t-sub" style="margin:8px 0 0">Sent back ${p.backs === 1 ? "once" : p.backs + " times"}</p>` : ""}
     <div class="post-links">${p.link ? `<a class="btn ghost small" href="${esc(p.link)}" target="_blank" rel="noopener">📁 Open in Drive</a>` : `<input class="drive" placeholder="Paste the Drive link" aria-label="Drive link for this post">`}
       <button class="linkish" data-act="${p.stage > 0 ? "back" : "remove"}">${p.stage > 0 ? "Undo last stage" : "Remove"}</button></div></div>`;
@@ -246,11 +255,12 @@ const addTile = () => `<button class="tile round add" data-open="add" aria-label
 /* ── the home screen ───────────────────────────────────────────────────── */
 function draw() {
   const d = D, owner = d.me.owner;
-  const calJobs = (d.jobs || []).every((j) => j.needs === "calendar");
   const tiles = owner
     ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), crmTile(), comingTile(false), addTile()]
+    : d.me.external
+      ? [mineTile(), alarmTile(), calTile(false), jobTile(), stepsTile(true)]
     : d.cal
-      ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), calJobs ? "" : jobTile(), comingTile(calJobs), addTile()]
+      ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), jobTile(), comingTile(false), addTile()]
       : [peopleTile(), mineTile(), alarmTile(), stepsTile(true), roomTile(), d.myProjects?.length ? projectsTile() : "", crmTile(), jobTile(), comingTile(!d.jobs?.length), addTile()];
   app.innerHTML = `<div class="wall"></div><div class="screen">
     <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
@@ -349,16 +359,26 @@ const PAGES = {
       <p class="block-h">What moves it next</p>${rows((m.steps || []).map(nextRow), "Nothing the data says needs doing right now.")}`;
   },
   jobs() {
-    return `<div class="icon">📋</div><h2>Your job</h2>${rows(D.jobs.map((j) => `<li><span class="chip">${j.check === "auto" ? "auto" : "tick"}</span><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : j.blank ? "Manav sets this: " + esc(j.blank.toLowerCase()) : j.needs === "instagram" ? "Checks itself once Instagram is connected" : "You tick this one"}</span></span></li>`), "")}`;
+    return `<div class="icon">📋</div><h2>Your job</h2>${rows(D.jobs.map((j) => `<li><span class="chip">${j.check === "auto" ? "auto" : "you"}</span><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : j.blank ? "Manav sets this: " + esc(j.blank.toLowerCase()) : j.needs === "instagram" ? "Checks itself once Instagram is read" : "The hub can't read this one, so it's on you"}</span></span></li>`), "")}`;
   },
   team() {
     const s = D.send;
     const sw = s ? `<p class="block-h" style="margin-top:0">WhatsApp nudges</p>
       <div class="chips" data-send>${[["off", "Off"], ["manav", "Only me"], ["team", "Whole team"]].map(([k, l]) => `<button type="button" class="${s.mode === k ? "on" : ""}" data-mode="${k}">${l}</button>`).join("")}</div>
       <p class="t-sub" style="margin:-8px 0 16px">Meta's approval of the message: ${esc(String(s.template).toLowerCase())}. Nothing sends between 10pm and 8am.</p>` : "";
-    return `<div class="icon">🧑‍🤝‍🧑</div><h2>Team</h2>${sw}${rows((D.team || []).map((t) => `<li><span class="txt"><b style="font-weight:600">${esc(t.name)}</b> <span class="chip ${esc(t.status.replace(/\s+/g, "-"))}">${esc(t.status)}</span>
-      <span class="meta">${esc(t.title)} · ${esc(t.label || "")}${t.account ? "" : " · no CRM account yet"}</span></span>
-      <span class="num-r">${t.value != null ? int(t.value) + (t.target ? `<small>of ${int(t.target)}</small>` : "") : "—"}${t.money != null ? `<small>${secret(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
+    const when = (x) => x.due ? (x.late ? "was due " : "by ") + day(x.due) : "no date yet";
+    return `<div class="icon">🧑‍🤝‍🧑</div><h2>Team</h2>${sw}${rows((D.team || []).map((t) => `<li style="align-items:flex-start"><span class="txt"><b style="font-weight:600">${esc(t.name)}</b> <span class="chip ${esc(t.status.replace(/\s+/g, "-"))}">${esc(t.status)}</span>
+      <span class="meta">${esc(t.title)} · ${esc(t.label || "")}</span>
+      <details class="fold" style="border:0;padding:8px 0 0"><summary>What's on their dashboard</summary>
+        ${t.empty ? `<p>${esc(t.empty)}</p>` : ""}${t.breakdown.map((x) => `<p>${esc(x)}</p>`).join("")}
+        ${t.reading.grace != null && t.reading.dark >= t.reading.grace ? `<p class="bad">No reading for ${t.reading.dark} days. ${esc(t.reading.why)} ${esc(t.reading.fallback)}</p>` : t.reading.of ? `<p>Measured on ${t.reading.read} of the last ${t.reading.of} days.</p>` : ""}
+        ${t.flags.length ? `<p class="block-h">Warnings</p>${rows(t.flags.map((f) => `<li><span class="txt ${f.late ? "bad" : ""}">${esc(f.text)}</span></li>`), "")}` : ""}
+        ${t.steps.length ? `<p class="block-h">Steps</p>${rows(t.steps.map((x) => `<li><span class="txt">${esc(x.title)}<span class="meta ${x.late ? "bad" : ""}">${esc(x.project)} · ${when(x)}</span></span></li>`), "")}` : ""}
+        ${t.jobs.length ? `<p class="block-h">Job list</p>${rows(t.jobs.map((j) => `<li><span class="chip">${j.check === "auto" ? "auto" : "them"}</span><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : j.check === "auto" ? "Not read yet" : "The hub can't read this one"}</span></span></li>`), "")}` : ""}
+        <div class="acts" style="margin-top:10px">${t.account ? `<span class="t-sub">Signs in with a CRM account</span>` : `<button class="btn small green" data-link="${esc(t.handle)}">Copy sign-in link</button><button class="linkish" data-link="${esc(t.handle)}" data-fresh="1">New link, old one stops</button>`}</div>
+        <p class="t-sub" data-linked="${esc(t.handle)}" style="margin-left:0;overflow-wrap:anywhere"></p>
+      </details></span>
+      <span class="num-r">${t.value != null ? int(t.value) + (t.unit === "%" ? "%" : "") + (t.target ? `<small>of ${int(t.target)}${t.unit === "%" ? "%" : ""}</small>` : "") : "—"}${t.money != null ? `<small>${secret(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
   },
   projects() {
     const ps = D.me.owner ? D.projects || [] : D.myProjects || [];
@@ -492,6 +512,16 @@ function wirePage(page, close, paint) {
     try { await api("/api/step", { id: Number(li.dataset.step), done: true }); setTimeout(() => { li.remove(); refresh(); }, motion ? 850 : 0); }
     catch (e) { b.classList.remove("on"); li.classList.remove("leaving"); alert(e.message); }
   });
+  /* The sign-in link: copied for him to send. If the browser won't copy, it's shown. */
+  page.querySelectorAll("[data-link]").forEach((b) => b.onclick = async () => {
+    const out = page.querySelector(`[data-linked="${b.dataset.link}"]`);
+    try {
+      const r = await api("/api/link", { handle: b.dataset.link, fresh: !!b.dataset.fresh });
+      let copied = false;
+      try { await navigator.clipboard.writeText(r.url); copied = true; } catch {}
+      out.textContent = copied ? `Copied. Send it to ${r.name} yourself. It opens this page signed in, and nothing else.` : r.url;
+    } catch (e) { out.textContent = e.message; }
+  });
   page.querySelectorAll("[data-decide]").forEach((b) => b.onclick = async () => {
     await api("/api/project/decide", { id: Number(b.dataset.id), verdict: b.dataset.decide }); close(); refresh();
   });
@@ -540,7 +570,7 @@ function addForm(page, close) {
   paint();
 }
 
-async function refresh() { try { D = await api("/api/board"); draw(); } catch (e) { if (e.message !== "signed out") console.error(e); } }
+async function refresh() { try { D = await api("/api/board"); if (D.key) store.set(D.key); draw(); } catch (e) { if (e.message !== "signed out") console.error(e); } }
 function load() {
   if (!store.get()) return login();
   /* Anyone signed in here is on the team, so the website stops counting this browser as a visitor. Same origin as chemistrylabs.in. */
