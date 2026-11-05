@@ -58,7 +58,7 @@
     var ref = '', host = '';
     try { if (document.referrer) { ref = new URL(document.referrer); host = ref.hostname.replace(/^www\./, ''); ref = host + ref.pathname; } } catch (e) {}
     if (host === location.hostname.replace(/^www\./, '')) { ref = ''; host = ''; }
-    var tag = (q.get('utm_source') || q.get('s') || q.get('ref') || '').toLowerCase();
+    var tag = (q.get('utm_source') || q.get('from') || q.get('s') || q.get('ref') || '').toLowerCase();
     tag = { ig: 'instagram', fb: 'facebook', li: 'linkedin', wa: 'whatsapp' }[tag] || tag;
     var src = tag ? tag : app || (function () {
       if (!host) return 'direct';
