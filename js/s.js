@@ -58,8 +58,9 @@
     var ref = '', host = '';
     try { if (document.referrer) { ref = new URL(document.referrer); host = ref.hostname.replace(/^www\./, ''); ref = host + ref.pathname; } } catch (e) {}
     if (host === location.hostname.replace(/^www\./, '')) { ref = ''; host = ''; }
-    var tag = q.get('utm_source') || q.get('s') || q.get('ref') || '';
-    var src = tag ? tag.toLowerCase() : app || (function () {
+    var tag = (q.get('utm_source') || q.get('s') || q.get('ref') || '').toLowerCase();
+    tag = { ig: 'instagram', fb: 'facebook', li: 'linkedin', wa: 'whatsapp' }[tag] || tag;
+    var src = tag ? tag : app || (function () {
       if (!host) return 'direct';
       var m = [[/instagram/, 'instagram'], [/facebook|fb\.com/, 'facebook'], [/linkedin|lnkd/, 'linkedin'], [/whatsapp|wa\.me/, 'whatsapp'], [/google\./, 'google'], [/bing\.|duckduckgo|yahoo\.|ecosia/, 'other search'], [/chatgpt|openai|perplexity|claude\.ai|gemini/, 'ai assistant'], [/twitter|^t\.co|^x\.com/, 'x'], [/youtube|youtu\.be/, 'youtube'], [/manavjoshi/, 'manavjoshi.com']];
       for (var i = 0; i < m.length; i++) if (m[i][0].test(host)) return m[i][1];
