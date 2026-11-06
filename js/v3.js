@@ -613,7 +613,7 @@
     function pull(byHand) {
       if (spinning) return;
       if (byHand) pulls++;
-      var won = byHand && pulls % 3 === 0, landing = deal(byHand, won);
+      var won = lost && byHand && pulls % 3 === 0, landing = deal(byHand, won);
       seen = true;
       if (calm) {
         reels.forEach(function (r, i) { lay(r.querySelector('.reel__strip'), landing.slice(i * rows, i * rows + rows)); });
