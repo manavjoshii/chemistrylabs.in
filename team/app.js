@@ -60,17 +60,18 @@ async function api(path, body) {
 }
 
 /* ── sign in ── */
+let givenPw = "", pwOffered = false;
 function login(msg = "") {
   app.innerHTML = `<div class="wall"></div><div class="screen"><form class="login" id="login">
     <h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
-    <p>Sign in with your CRM account. No account? Open the link Manav sent you.</p>
-    <label class="f"><span>Handle</span><input name="handle" autocomplete="username" autocapitalize="none" required></label>
+    <p>Sign in with your username and password.</p>
+    <label class="f"><span>Username</span><input name="handle" autocomplete="username" autocapitalize="none" required></label>
     <label class="f"><span>Password</span><input name="pw" type="password" autocomplete="current-password" required></label>
     <p class="err">${esc(msg)}</p><button class="btn green" type="submit">Sign in</button></form></div>`;
   $("#login").onsubmit = async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
-    try { const { key } = await api("/api/login", { handle: f.get("handle"), pw: f.get("pw") }); store.set(key); firstPaint = true; load(); }
+    try { const { key, pw } = await api("/api/login", { handle: f.get("handle"), pw: f.get("pw") }); if (pw) givenPw = f.get("pw"); store.set(key); firstPaint = true; load(); }
     catch (err) { login(err.message); }
   };
 }
@@ -271,13 +272,14 @@ function draw() {
       : [peopleTile(), mineTile(), alarmTile(), attendTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()];
   app.innerHTML = `<div class="wall"></div><div class="screen">
     <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
-      <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b></div></header>
+      <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b>${d.account ? `<button class="linkish" data-open="password" style="font-size:13px">Change password</button>` : ""}</div></header>
     ${d.sample ? `<p class="sample">Test copy of the CRM, frozen at ${esc(day(d.today))}. Not today's numbers.</p>` : ""}
     <main class="grid">${tiles.join("")}</main></div>`;
   app.querySelectorAll("[data-open]").forEach((t) => t.addEventListener("click", () => open(t.dataset.open, t)));
   app.querySelectorAll("[data-day]").forEach((v) => v.addEventListener("click", () => open("day", v, v.dataset.day)));
   app.querySelectorAll("[data-crm-ask]").forEach((b) => b.addEventListener("click", async () => { try { await api("/api/crm/request", {}); D.crmAsk.asked = true; draw(); } catch (e) { alert(e.message); } }));
   if (firstPaint) { firstPaint = false; animate(); }
+  if (d.account?.temp && !pwOffered) { pwOffered = true; open("password", app.querySelector(".hello")); }
 }
 
 /* Motion only ever starts inside an animation frame, so a browser that never
@@ -384,7 +386,7 @@ const PAGES = {
         ${t.flags.length ? `<p class="block-h">Warnings</p>${rows(t.flags.map((f) => `<li><span class="txt ${f.late ? "bad" : ""}">${esc(f.text)}</span></li>`), "")}` : ""}
         ${t.steps.length ? `<p class="block-h">Steps</p>${rows(t.steps.map((x) => `<li><span class="txt">${esc(x.title)}<span class="meta ${x.late ? "bad" : ""}">${esc(x.project)} · ${when(x)}</span></span></li>`), "")}` : ""}
         ${t.jobs.length ? `<p class="block-h">Job list</p>${rows(t.jobs.map((j) => `<li><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : "Reconnect Instagram"}</span></span></li>`), "")}` : ""}
-        <div class="acts" style="margin-top:10px">${t.account ? `<span class="t-sub">Signs in with a CRM account</span>` : `<button class="btn small green" data-link="${esc(t.handle)}">Copy sign-in link</button><button class="linkish" data-link="${esc(t.handle)}" data-fresh="1">New link, old one stops</button>`}</div>
+        <div class="acts" style="margin-top:10px">${t.account ? `<span class="t-sub">Signs in with a username</span>` : `<button class="btn small green" data-link="${esc(t.handle)}">Copy sign-in link</button><button class="linkish" data-link="${esc(t.handle)}" data-fresh="1">New link, old one stops</button>`}</div>
         <p class="t-sub" data-linked="${esc(t.handle)}" style="margin-left:0;overflow-wrap:anywhere"></p>
       </details></span>
       <span class="num-r">${t.value != null ? int(t.value) + (t.unit === "%" ? "%" : "") + (t.target ? `<small>of ${int(t.target)}${t.unit === "%" ? "%" : ""}</small>` : "") : "—"}${t.money != null ? `<small>${secret(t.money)}</small>` : ""}</span></li>`), "No one yet.")}`;
@@ -437,6 +439,16 @@ const PAGES = {
       <form class="addpost" data-day="${esc(key)}"><div class="chips">${D.cal.formats.map((f, i) => `<button type="button" class="${i === 0 ? "on" : ""}" data-f="${f}">${cap(f)}</button>`).join("")}</div>
         <div class="inline"><input name="idea" placeholder="What's the post?" required><button class="btn small green">Add</button></div><p class="err"></p></form>
       ${d.slot && !posts.length ? `<p class="t-sub">An empty slot stays empty until there's a real post for it.</p>` : ""}`;
+  },
+  password() {
+    const first = D.account?.temp;
+    return `<div class="icon">🔑</div><h2>${first ? "You're in. Pick your own password." : "Change password"}</h2>
+      ${first ? `<p class="t-sub" style="font-size:14.5px">The one you just used was set for you.</p>` : ""}
+      <form data-password>
+        <label class="f" ${givenPw ? "hidden" : ""}><span>Current password</span><input name="old" type="password" autocomplete="current-password" value="${esc(givenPw)}" required></label>
+        <label class="f"><span>New password</span><input name="pw" type="password" autocomplete="new-password" minlength="6" required></label>
+        <p class="err" data-pw-msg></p><button class="btn green" type="submit">Save</button></form>
+      ${first ? `<button class="linkish" data-pw-keep style="margin-top:12px">Keep this one for now</button>` : ""}`;
   },
   add() { return `<div class="icon">＋</div><h2>New project</h2><div id="addbody"></div>`; },
   website() {
@@ -540,6 +552,18 @@ function wirePage(page, close, paint) {
   /* Attendance: chips toggle, the list on save becomes that session's own record. */
   const attendSaved = () => { close(); refresh(); };
   page.querySelectorAll("[data-came] [data-name]").forEach((b) => b.onclick = () => b.classList.toggle("on"));
+  const pwForm = page.querySelector("[data-password]");
+  if (pwForm) {
+    const done = () => { if (D.account) D.account.temp = false; givenPw = ""; close(); };
+    pwForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(pwForm);
+      try { await api("/api/password", { old: f.get("old"), pw: f.get("pw") }); done(); }
+      catch (err) { pwForm.querySelector("[data-pw-msg]").textContent = err.message; }
+    };
+    const keep = page.querySelector("[data-pw-keep]");
+    if (keep) keep.onclick = async () => { await api("/api/password", { keep: true }); done(); };
+  }
   const sess = page.querySelector("[data-session]");
   if (sess) sess.onsubmit = async (e) => {
     e.preventDefault();
