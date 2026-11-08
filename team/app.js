@@ -235,6 +235,13 @@ function attendTile() {
     <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Tick who came</span><span class="t-sub">${last ? `Last: ${esc(last.label)}, ${last.came.length} of ${last.due.length}` : "No session yet"}</span></button>`;
 }
 
+/* Umang's base for the pilot: the founders' numbers and call status, in the sheet the hub reads. */
+function contactsTile() {
+  const s = D.attend && D.attend.sheet; if (!s) return "";
+  return `<a class="tile w2" href="${esc(s)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none"><span class="t-label"><em>📞</em>Founders</span><span class="spacer"></span>
+    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Catalyst contacts</span><span class="t-sub">Open the sheet ↗</span></a>`;
+}
+
 /* Manav and Umang only: opens the agreement form. The server sends it only with a valid sign-in,
    so it comes through the API and opens as a page of its own. */
 function agreementsTile() {
@@ -288,7 +295,7 @@ function draw() {
       ? [mineTile(), alarmTile(), calTile(false), jobTile(), stepsTile(true)]
     : d.cal
       ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()]
-      : [peopleTile(), mineTile(), alarmTile(), attendTile(), agreementsTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()];
+      : [peopleTile(), mineTile(), alarmTile(), attendTile(), contactsTile(), agreementsTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()];
   app.innerHTML = `<div class="wall"></div><div class="screen">
     <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
       <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b>${d.account ? `<button class="linkish" data-open="password" style="font-size:13px">Change password</button>` : ""}</div></header>
