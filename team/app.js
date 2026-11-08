@@ -238,8 +238,8 @@ function attendTile() {
 /* Umang's base for the pilot: the founders' numbers and call status, in the sheet the hub reads. */
 function contactsTile() {
   const s = D.attend && D.attend.sheet; if (!s) return "";
-  return `<a class="tile w2" href="${esc(s)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none"><span class="t-label"><em>📞</em>Founders</span><span class="spacer"></span>
-    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Catalyst contacts</span><span class="t-sub">Open the sheet ↗</span></a>`;
+  return `<a class="tile w2" href="${esc(s)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none"><span class="t-label"><em>📞</em>Catalyst founders</span><span class="spacer"></span>
+    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Contacts</span><span class="t-sub">Open the sheet ↗</span></a>`;
 }
 
 /* Manav and Umang only: opens the agreement form. The server sends it only with a valid sign-in,
@@ -247,7 +247,7 @@ function contactsTile() {
 function agreementsTile() {
   if (!D.agreements) return "";
   return `<button class="tile w2" data-agree><span class="t-label"><em>📝</em>Agreements</span><span class="spacer"></span>
-    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Make a founder's agreement</span><span class="t-sub">Opens the form and downloads a PDF</span></button>`;
+    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">New agreement</span><span class="t-sub">Opens the form and downloads a PDF</span></button>`;
 }
 
 async function openAgreements() {
