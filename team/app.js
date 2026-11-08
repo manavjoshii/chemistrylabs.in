@@ -175,26 +175,19 @@ function stepsTile(wide) {
 
 function roomTile() {
   const r = D.coming.find((c) => c.type === "room");
-  if (!r) return `<button class="tile w2" data-open="coming"><span class="t-label"><em>🗓️</em>Next room</span><span class="spacer"></span><span class="t-sub">Nothing on the calendar</span></button>`;
+  if (!r) return `<button class="tile w2" data-open="coming"><span class="t-label"><em>🗓️</em>Next room</span><span class="spacer"></span><span class="t-sub">Add the next room in the CRM</span></button>`;
   const [wd, dd] = r.day.split(" ");
   return `<button class="tile w2" data-open="coming"><span class="t-label"><em>🗓️</em>${esc(r.kind === "practical" ? r.name : r.city || r.name)}</span><span class="spacer"></span>
     <span class="date-chip">${esc(dd)}<small>${esc(wd)} · ${r.sold}/${r.chairs}</small></span>
     <div class="pips">${Array.from({ length: Math.min(r.chairs, 24) }, (_, i) => `<i class="${i < r.sold ? "s" : ""}"></i>`).join("")}</div></button>`;
 }
 
-function comingTile(wide) {
-  const next = D.coming.find((c) => c.type === "line") || D.coming[0];
-  return `<button class="tile ${wide ? "w4" : "w2 h2"}" data-open="coming"><span class="t-label"><em>✨</em>Coming up</span><span class="spacer"></span>
-    ${next ? `<span style="font-weight:600;font-size:18px;letter-spacing:-0.02em;position:relative">${esc(next.name)}</span><span class="t-sub">${esc(next.day)}${D.coming.length > 1 ? ` · ${D.coming.length - 1} more` : ""}</span>`
-      : `<span class="t-sub">Add something to look forward to</span>`}</button>`;
-}
-
 function jobTile() {
   const j = D.jobs || [];
   if (!j.length) return "";
-  const blanks = j.filter((x) => x.blank).length, auto = j.filter((x) => x.check === "auto").length;
+  const ok = j.filter((x) => x.status?.ok).length;
   return `<button class="tile w2 h2" data-open="jobs"><span class="t-label"><em>📋</em>Your job</span><span class="spacer"></span>
-    <span class="t-big">${j.length}</span><span class="t-sub">${auto} check themselves${blanks ? ` · ${blanks} for Manav to set` : ""}</span></button>`;
+    <span class="t-big">${ok}/${j.length}</span><span class="t-sub">on track</span></button>`;
 }
 
 /* The calendar tile: the next 14 days as small vials, each filling as its
@@ -211,7 +204,8 @@ function calTile(strip) {
       <i class="v-fill" style="--k:${k}"></i>${d.slot ? '<i class="v-slot"></i>' : ""}<b>${d.date}</b>${strip ? "" : `<small>${d.dow}</small>`}${d.count > 1 ? `<em>${d.count}</em>` : ""}</button>`;
   }).join("");
   return `<div class="tile w4 ${strip ? "strip" : "h2"} cal"><span class="t-label"><em>🗓️</em>Calendar
-    <span class="cal-sum ${warn ? "warn" : ""}">${st.filled} of ${st.slots} slots planned · ${st.ready} ready${st.waiting ? ` · ${st.waiting} waiting` : ""}</span></span>
+    <span class="cal-sum ${warn ? "warn" : ""}">${st.filled} of ${st.slots} slots planned · ${st.ready} ready${st.waiting ? ` · ${st.waiting} waiting` : ""}</span>
+    ${c.sheet ? `<a href="${esc(c.sheet)}" target="_blank" rel="noopener" style="margin-left:auto;color:inherit">Open the sheet ↗</a>` : ""}</span>
     <div class="vials">${cells}</div></div>`;
 }
 
@@ -241,7 +235,12 @@ function attendTile() {
 }
 
 function crmTile() {
-  const c = D.crm; if (!c) return "";
+  const c = D.crm;
+  /* The tile is always the next step: open it, ask for it, or know it's on its way. */
+  if (!c && D.crmAsk) return D.crmAsk.asked
+    ? `<div class="tile w2"><span class="t-label"><em>📇</em>CRM</span><span class="spacer"></span><span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Account requested</span><span class="t-sub">Manav is setting it up</span></div>`
+    : `<button class="tile w2" data-crm-ask><span class="t-label"><em>📇</em>CRM</span><span class="spacer"></span><span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Request a CRM account</span><span class="t-sub">To add dates and decide applications</span></button>`;
+  if (!c) return "";
   /* Opens the CRM already signed in: the CRM takes the same token from #key=. */
   const href = `${c.url}/#key=${encodeURIComponent(store.get())}`;
   return `<a class="tile w2" href="${esc(href)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="t-label"><em>📇</em>CRM</span><span class="spacer"></span>
@@ -258,18 +257,18 @@ function websiteTile() {
     <span class="t-sub web-line${top && top.rank === 1 ? " web-bad" : ""}">${esc(line)}</span></button>`;
 }
 
-const addTile = () => `<button class="tile round add" data-open="add" aria-label="Add">+</button>`;
+const addTile = () => `<button class="tile round add" data-open="add" aria-label="New project">+</button>`;
 
 /* ── the home screen ───────────────────────────────────────────────────── */
 function draw() {
   const d = D, owner = d.me.owner;
   const tiles = owner
-    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), attendTile(), crmTile(), comingTile(false), addTile()]
+    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), attendTile(), crmTile(), addTile()]
     : d.me.external
       ? [mineTile(), alarmTile(), calTile(false), jobTile(), stepsTile(true)]
     : d.cal
-      ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), jobTile(), comingTile(false), addTile()]
-      : [peopleTile(), mineTile(), alarmTile(), attendTile(), stepsTile(true), roomTile(), d.myProjects?.length ? projectsTile() : "", crmTile(), jobTile(), comingTile(!d.jobs?.length), addTile()];
+      ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()]
+      : [peopleTile(), mineTile(), alarmTile(), attendTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()];
   app.innerHTML = `<div class="wall"></div><div class="screen">
     <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
       <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b></div></header>
@@ -277,6 +276,7 @@ function draw() {
     <main class="grid">${tiles.join("")}</main></div>`;
   app.querySelectorAll("[data-open]").forEach((t) => t.addEventListener("click", () => open(t.dataset.open, t)));
   app.querySelectorAll("[data-day]").forEach((v) => v.addEventListener("click", () => open("day", v, v.dataset.day)));
+  app.querySelectorAll("[data-crm-ask]").forEach((b) => b.addEventListener("click", async () => { try { await api("/api/crm/request", {}); D.crmAsk.asked = true; draw(); } catch (e) { alert(e.message); } }));
   if (firstPaint) { firstPaint = false; animate(); }
 }
 
@@ -348,7 +348,7 @@ const PAGES = {
       ${prop("◎ Target", c.target ? secret(c.target) : "Not set")}</dl>
       <p class="t-sub" style="margin:-6px 0 12px">Tap any ₹ •••• to see it, and tap again to hide it. It also hides itself after 15 seconds.</p>
       ${goalForm("revenue", c, true)}
-      ${fold("How this is counted", "Seats paid this month, by the day the money came in, at each room's own price. Comped seats are never money. Plus anything added with + as money in. Hosting income is never part of it. Only you can see this.")}`;
+      ${fold("How this is counted", "Seats paid this month, by the day the money came in, at each room's own price. Comped seats are never money. Hosting income is never part of it. Only you can see this.")}`;
   },
   next() {
     const list = D.me.owner ? D.next || [] : [D.warning, ...(D.mine?.steps || [])].filter(Boolean);
@@ -358,17 +358,17 @@ const PAGES = {
   mine() {
     const m = D.mine;
     return `<div class="icon">${iconOf(D.me.title)}</div><h2>${esc(m.label)}</h2><dl class="props">
-      ${m.value != null ? prop("✔︎ This month", int(m.value) + (m.unit === "%" ? "%" : m.unit ? " " + esc(m.unit) : "")) : prop("Status", esc(m.empty || "Waiting"))}
+      ${m.value != null ? prop(m.period || "✔︎ This month", int(m.value) + (m.unit === "%" ? "%" : m.unit ? " " + esc(m.unit) : "")) : prop("Status", esc(m.empty || "Waiting"))}
       ${m.target ? prop("◎ Target", int(m.target)) : ""}
       ${m.forecast != null && m.value != null ? prop("➜ Heading for", int(m.forecast)) : ""}
       ${m.money != null ? prop("💰 From your work", secret(m.money)) : ""}
       ${m.plan ? prop("🧪 " + esc(m.plan.label), `${m.plan.value} of ${m.plan.of}`, m.plan.value >= m.plan.of ? "good" : "bad") : ""}
       ${(m.breakdown || []).map((b) => prop("·", esc(b))).join("")}</dl>
       ${m.note ? `<p class="t-sub" style="font-size:14.5px">${esc(m.note)}</p>` : ""}
-      <p class="block-h">What moves it next</p>${rows((m.steps || []).map(nextRow), "Nothing the data says needs doing right now.")}`;
+      <p class="block-h">What moves it next</p>${rows((m.steps || []).map(nextRow), "You're clear. Nothing needs you right now.")}`;
   },
   jobs() {
-    return `<div class="icon">📋</div><h2>Your job</h2>${rows(D.jobs.map((j) => `<li><span class="chip">${j.check === "auto" ? "auto" : "you"}</span><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : j.blank ? "Manav sets this: " + esc(j.blank.toLowerCase()) : j.needs === "instagram" ? "Checks itself once Instagram is read" : "The hub can't read this one, so it's on you"}</span></span></li>`), "")}`;
+    return `<div class="icon">📋</div><h2>Your job</h2>${rows(D.jobs.map((j) => `<li><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : "Ask Manav to reconnect Instagram"}</span></span></li>`), "")}`;
   },
   team() {
     const s = D.send;
@@ -383,7 +383,7 @@ const PAGES = {
         ${t.reading.held ? `<p>Alarm held until ${esc(day(t.reading.held))}.</p>` : t.reading.grace != null && t.reading.dark >= t.reading.grace ? `<p class="bad">No reading for ${t.reading.dark} days. ${esc(t.reading.why)} ${esc(t.reading.fallback)}</p>` : t.reading.of ? `<p>Measured on ${t.reading.read} of the last ${t.reading.of} days.</p>` : ""}
         ${t.flags.length ? `<p class="block-h">Warnings</p>${rows(t.flags.map((f) => `<li><span class="txt ${f.late ? "bad" : ""}">${esc(f.text)}</span></li>`), "")}` : ""}
         ${t.steps.length ? `<p class="block-h">Steps</p>${rows(t.steps.map((x) => `<li><span class="txt">${esc(x.title)}<span class="meta ${x.late ? "bad" : ""}">${esc(x.project)} · ${when(x)}</span></span></li>`), "")}` : ""}
-        ${t.jobs.length ? `<p class="block-h">Job list</p>${rows(t.jobs.map((j) => `<li><span class="chip">${j.check === "auto" ? "auto" : "them"}</span><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : j.check === "auto" ? "Not read yet" : "The hub can't read this one"}</span></span></li>`), "")}` : ""}
+        ${t.jobs.length ? `<p class="block-h">Job list</p>${rows(t.jobs.map((j) => `<li><span class="txt">${esc(j.label)}<span class="meta ${j.status && !j.status.ok ? "bad" : ""}">${j.status ? (j.status.ok ? "✓ " : "") + esc(j.status.value) : "Reconnect Instagram"}</span></span></li>`), "")}` : ""}
         <div class="acts" style="margin-top:10px">${t.account ? `<span class="t-sub">Signs in with a CRM account</span>` : `<button class="btn small green" data-link="${esc(t.handle)}">Copy sign-in link</button><button class="linkish" data-link="${esc(t.handle)}" data-fresh="1">New link, old one stops</button>`}</div>
         <p class="t-sub" data-linked="${esc(t.handle)}" style="margin-left:0;overflow-wrap:anywhere"></p>
       </details></span>
@@ -395,13 +395,11 @@ const PAGES = {
       <form data-session>
         <label class="f"><span>Session day</span><input name="day" type="date" value="${esc(a.today)}" required></label>
         <p class="block-h">Who came</p>
-        <div class="chips" data-came>${a.founders.map((n) => `<button type="button" data-name="${esc(n)}">${esc(n)}</button>`).join("") || `<span class="t-sub">Add the founders below first.</span>`}</div>
+        <div class="chips" data-came>${a.founders.map((n) => `<button type="button" data-name="${esc(n)}">${esc(n)}</button>`).join("") || `<span class="t-sub">Add the founders to the Catalyst sheet.</span>`}</div>
         <button class="btn green" type="submit">Save this session</button></form>
       <p class="block-h">Past sessions</p>
       ${rows(a.sessions.map((s) => `<li><span class="txt">${esc(s.label)}<span class="meta">${s.due.filter((n) => !s.came.includes(n)).length ? "Missed: " + esc(s.due.filter((n) => !s.came.includes(n)).join(", ")) : "Everyone came"}</span></span><span class="num-r">${s.came.length}<small>of ${s.due.length}</small></span><button class="linkish" data-unsession="${esc(s.day)}">Remove</button></li>`), "No session ticked yet.")}
-      <p class="block-h">Founders</p>
-      ${rows(a.founders.map((n) => `<li><span class="txt">${esc(n)}</span><button class="linkish" data-unfounder="${esc(n)}">Remove</button></li>`), "No founders yet.")}
-      <form class="inline" data-founder style="margin-top:10px"><input name="n" placeholder="Add a founder" aria-label="Add a founder"><button class="btn small green" type="submit">Add</button></form>
+      <p class="t-sub" style="margin-top:14px">The founder list comes from the Catalyst sheet, and updates every hour.</p>
       <p class="t-sub" data-attend-msg style="margin-top:10px"></p>`;
   },
   projects() {
@@ -412,6 +410,7 @@ const PAGES = {
       <div class="pips">${p.steps.map((s) => `<i class="${s.done ? "d" : s.late ? "l" : ""}"></i>`).join("")}</div>
       <details class="fold" style="border:0;padding:8px 0 0"><summary>Steps</summary>${rows(p.steps.map((s) => `<li><span class="txt">${s.done ? "<s>" : ""}${esc(s.title)}${s.done ? "</s>" : ""}<span class="meta ${s.late ? "bad" : ""}">${esc(s.owner)} · ${s.due ? (s.late ? "was due " : "by ") + day(s.due) : "no date yet"}</span></span></li>`), "")}</details>
       ${p.status === "proposed" ? `<div class="acts"><button class="btn small green" data-decide="approve" data-id="${p.id}">Approve</button><button class="btn small ghost" data-decide="kill" data-id="${p.id}">Kill</button></div>` : ""}
+      ${p.status === "paused" ? `<div class="acts"><button class="btn small green" data-decide="approve" data-id="${p.id}">Start it again</button></div>` : ""}
       ${p.status === "live" ? `<form class="inline addstep" data-project="${p.id}" style="margin-top:10px"><input name="t" placeholder="Add a step" aria-label="Add a step to ${esc(p.title)}"><input name="d" type="date" aria-label="By when" style="max-width:150px"><button class="btn small ghost">Add</button></form>` : ""}
       </span></li>`), "No projects yet. Start one with +.")}
       ${D.waiting ? `<p class="t-sub" style="margin-top:14px">${D.waiting === 1 ? "One message is" : D.waiting + " messages are"} waiting to go to the team. Nothing is sent until you say go.</p>` : ""}`;
@@ -419,13 +418,15 @@ const PAGES = {
   steps() {
     return `<div class="icon">✅</div><h2>Your steps</h2>${rows(D.steps.map((s) => `<li data-step="${s.id}">
       <button class="tick" aria-label="Mark done: ${esc(s.title)}"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.8"/></svg></button>
-      <span class="txt">${esc(s.title)}<span class="meta ${s.late ? "bad" : ""}">${esc(s.project)} · ${s.due ? (s.late ? "was due " : "by ") + day(s.due) : "no date yet"}</span></span></li>`), "Nothing waiting on you.")}`;
+      <span class="txt">${esc(s.title)}<span class="meta ${s.late ? "bad" : ""}">${esc(s.project)} · ${s.due ? (s.late ? "was due " : "by ") + day(s.due) : "no date yet"}</span></span></li>`), "Nothing waiting on you.")}
+      ${(() => { const o = (D.myProjects || []).flatMap((p) => p.steps.filter((s) => !s.done && s.owner !== D.me.handle).map((s) => ({ ...s, project: p.title })));
+        return o.length ? `<p class="block-h">Someone else's turn</p>${rows(o.map((s) => `<li><span class="txt">${esc(s.title)}<span class="meta">${esc(cap(s.owner))} · ${s.due ? "by " + day(s.due) : "no date yet"}</span></span></li>`), "")}` : ""; })()}`;
   },
   coming() {
-    return `<div class="icon">✨</div><h2>Coming up</h2>${rows(D.coming.map((c) => `<li><span class="txt">${esc(c.name)}${c.kind === "practical" ? ' <span class="chip">practical</span>' : ""}
+    return `<div class="icon">🗓️</div><h2>Coming up</h2>${rows(D.coming.map((c) => `<li><span class="txt">${esc(c.name)}${c.kind === "practical" ? ' <span class="chip">practical</span>' : ""}
       <span class="meta">${esc(c.day)}${c.city ? " · " + esc(c.city) : ""}</span>
       ${c.type === "room" ? `<div class="pips">${Array.from({ length: Math.min(c.chairs, 30) }, (_, i) => `<i class="${i < c.sold ? "s" : ""}"></i>`).join("")}</div>` : ""}</span>
-      ${c.type === "room" ? `<span class="num-r">${c.sold}/${c.chairs}<small>chairs</small></span>` : ""}</li>`), "Nothing yet. Add something with +.")}`;
+      ${c.type === "room" ? `<span class="num-r">${c.sold}/${c.chairs}<small>chairs</small></span>` : ""}</li>`), "Add the next room in the CRM.")}`;
   },
   day(key) {
     const d = D.cal.days.find((x) => x.day === key) || { label: key, slot: "" };
@@ -437,7 +438,7 @@ const PAGES = {
         <div class="inline"><input name="idea" placeholder="What's the post?" required><button class="btn small green">Add</button></div><p class="err"></p></form>
       ${d.slot && !posts.length ? `<p class="t-sub">An empty slot stays empty until there's a real post for it.</p>` : ""}`;
   },
-  add() { return `<div class="icon">＋</div><h2>Add</h2><div id="addbody"></div>`; },
+  add() { return `<div class="icon">＋</div><h2>New project</h2><div id="addbody"></div>`; },
   website() {
     const w = D.website || {}, r = w.room || {}, l = w.learnings || [];
     return `<div class="icon">🔭</div><h2>Website</h2>
@@ -548,14 +549,6 @@ function wirePage(page, close, paint) {
     catch (err) { msg.textContent = err.message; }
   };
   page.querySelectorAll("[data-unsession]").forEach((b) => b.onclick = async () => { await api("/api/session", { day: b.dataset.unsession, remove: true }); attendSaved(); });
-  const addF = page.querySelector("[data-founder]");
-  if (addF) addF.onsubmit = async (e) => {
-    e.preventDefault();
-    const n = String(new FormData(addF).get("n") || "").trim();
-    if (n) { await api("/api/founders", { names: [...D.attend.founders, n] }); attendSaved(); }
-  };
-  page.querySelectorAll("[data-unfounder]").forEach((b) => b.onclick = async () => { await api("/api/founders", { names: D.attend.founders.filter((x) => x !== b.dataset.unfounder) }); attendSaved(); });
-
   /* Every link at once, one line per person, for him to send one by one. */
   const allLinks = page.querySelector("[data-links]");
   if (allLinks) allLinks.onclick = async () => {
@@ -594,16 +587,10 @@ function wirePage(page, close, paint) {
 /* ── + : one line in. Money the CRM can't see, something to look forward
    to, or a new project. ── */
 function addForm(page, close) {
-  const kinds = [["money", "💰 Money in"], ["ahead", "✨ Coming up"], ["project", "🗂️ New project"]];
-  let kind = "money";
+  const kind = "project";
   const people = [...new Set((D.team || []).map((t) => t.handle).concat(D.me.handle))];
   const stepRow = () => `<div class="steprow"><input name="st" placeholder="What"><select name="so">${people.map((h) => `<option value="${esc(h)}" ${h === D.me.handle ? "selected" : ""}>${esc(h)}</option>`).join("")}</select><input name="sd" type="date" aria-label="By when"></div>`;
   const F = {
-    money: `<label class="f"><span>How much</span><input name="amount" inputmode="numeric" placeholder="₹ 15,000" required></label>
-      <label class="f"><span>From what</span><input name="text" placeholder="Catalyst fee from Divyam"></label>
-      <label class="f"><span>When it came in</span><input name="day" type="date" value="${D.today}"></label>`,
-    ahead: `<label class="f"><span>What's coming</span><input name="text" placeholder="Diwali party on the terrace" required></label>
-      <label class="f"><span>When</span><input name="day" type="date" value="${D.today}"></label>`,
     project: `<label class="f"><span>Project</span><input name="title" placeholder="Practicals in Surat" required></label>
       <label class="f"><span>Done looks like</span><input name="test" placeholder="First Surat practical runs with 12 people"></label>
       <label class="f"><span>Ends</span><input name="ends" type="date"></label>
@@ -613,15 +600,13 @@ function addForm(page, close) {
   };
   const body = $("#addbody", page);
   const paint = () => {
-    body.innerHTML = `<div class="chips">${kinds.map(([k, l]) => `<button type="button" class="${k === kind ? "on" : ""}" data-k="${k}">${l}</button>`).join("")}</div>
-      <form id="addf">${F[kind]}<p class="err" id="adderr"></p><button class="btn green" type="submit">Add</button></form>`;
-    body.querySelectorAll("[data-k]").forEach((c) => c.onclick = () => { kind = c.dataset.k; paint(); });
-    if (kind === "project") { const r = $("#rows", body); r.innerHTML = stepRow(); $("#more", body).onclick = () => r.insertAdjacentHTML("beforeend", stepRow()); }
+    body.innerHTML = `<form id="addf">${F[kind]}<p class="err" id="adderr"></p><button class="btn green" type="submit">Add</button></form>`;
+    { const r = $("#rows", body); r.innerHTML = stepRow(); $("#more", body).onclick = () => r.insertAdjacentHTML("beforeend", stepRow()); }
     $("#addf", body).onsubmit = async (e) => {
       e.preventDefault();
       const f = new FormData(e.target);
-      const b = { kind, text: f.get("text"), amount: Number(String(f.get("amount") || "").replace(/[^\d.]/g, "")), day: f.get("day"), title: f.get("title"), test: f.get("test"), ends: f.get("ends") };
-      if (kind === "project") { const t = f.getAll("st"), o = f.getAll("so"), dd = f.getAll("sd"); b.steps = t.map((x, i) => ({ title: x, owner: o[i], due: dd[i] })).filter((s) => s.title.trim()); }
+      const b = { kind, title: f.get("title"), test: f.get("test"), ends: f.get("ends") };
+      { const t = f.getAll("st"), o = f.getAll("so"), dd = f.getAll("sd"); b.steps = t.map((x, i) => ({ title: x, owner: o[i], due: dd[i] })).filter((s) => s.title.trim()); }
       try { await api("/api/add", b); close(); refresh(); } catch (err) { $("#adderr", body).textContent = err.message; }
     };
   };
