@@ -235,6 +235,25 @@ function attendTile() {
     <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Tick who came</span><span class="t-sub">${last ? `Last: ${esc(last.label)}, ${last.came.length} of ${last.due.length}` : "No session yet"}</span></button>`;
 }
 
+/* Manav and Umang only: opens the agreement form. The server sends it only with a valid sign-in,
+   so it comes through the API and opens as a page of its own. */
+function agreementsTile() {
+  if (!D.agreements) return "";
+  return `<button class="tile w2" data-agree><span class="t-label"><em>📝</em>Agreements</span><span class="spacer"></span>
+    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Make a founder's agreement</span><span class="t-sub">Opens the form and downloads a PDF</span></button>`;
+}
+
+async function openAgreements() {
+  const w = window.open("", "_blank");
+  try {
+    const r = await fetch(API + "/api/agreements", { headers: { "x-key": store.get() } });
+    if (r.status === 401) { store.set(""); login(); if (w) w.close(); return; }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Something went wrong.");
+    const url = URL.createObjectURL(new Blob([await r.text()], { type: "text/html" }));
+    if (w) w.location.href = url; else location.href = url;
+  } catch (e) { if (w) w.close(); alert(e.message || "Could not open the form."); }
+}
+
 function crmTile() {
   const c = D.crm;
   /* The tile is always the next step: open it, ask for it, or know it's on its way. */
@@ -264,18 +283,19 @@ const addTile = () => `<button class="tile round add" data-open="add" aria-label
 function draw() {
   const d = D, owner = d.me.owner;
   const tiles = owner
-    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), attendTile(), crmTile(), addTile()]
+    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), attendTile(), agreementsTile(), crmTile(), addTile()]
     : d.me.external
       ? [mineTile(), alarmTile(), calTile(false), jobTile(), stepsTile(true)]
     : d.cal
       ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()]
-      : [peopleTile(), mineTile(), alarmTile(), attendTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()];
+      : [peopleTile(), mineTile(), alarmTile(), attendTile(), agreementsTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()];
   app.innerHTML = `<div class="wall"></div><div class="screen">
     <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
       <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b>${d.account ? `<button class="linkish" data-open="password" style="font-size:13px">Change password</button>` : ""}</div></header>
     ${d.sample ? `<p class="sample">Test copy of the CRM, frozen at ${esc(day(d.today))}. Not today's numbers.</p>` : ""}
     <main class="grid">${tiles.join("")}</main></div>`;
   app.querySelectorAll("[data-open]").forEach((t) => t.addEventListener("click", () => open(t.dataset.open, t)));
+  app.querySelectorAll("[data-agree]").forEach((b) => b.addEventListener("click", openAgreements));
   app.querySelectorAll("[data-day]").forEach((v) => v.addEventListener("click", () => open("day", v, v.dataset.day)));
   app.querySelectorAll("[data-crm-ask]").forEach((b) => b.addEventListener("click", async () => { try { await api("/api/crm/request", {}); D.crmAsk.asked = true; draw(); } catch (e) { alert(e.message); } }));
   if (firstPaint) { firstPaint = false; animate(); }
