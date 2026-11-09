@@ -56,7 +56,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
     </p>
 
     <form class="form" id="f" novalidate>
-<div class="fld keep" id="toFld"><span class="lbl" id="lblTo">What do you want to come to?</span><div class="pick" id="toPick" role="radiogroup" aria-labelledby="lblTo"><input type="radio" name="to" id="to_club" value="club"><label for="to_club">Sunday Morning Build Club</label><input type="radio" name="to" id="to_content" value="content"><label for="to_content">Founder Content</label></div><p class="hint" id="toNote" style="display:none">Reactions opens after your first experience. Pick one to start.</p><p class="hint" id="vcNote">Venture Catalyst is members only. Attend a Build Club or a Practical first, and we will consider you for it.</p></div>
+<div class="fld keep" id="toFld"><span class="lbl" id="lblTo">What do you want to come to?</span><div class="pick" id="toPick" role="radiogroup" aria-labelledby="lblTo"><input type="radio" name="to" id="to_club" value="club"><label for="to_club">Sunday Morning Build Club</label><input type="radio" name="to" id="to_content" value="content"><label for="to_content">Founder Content</label></div><p class="hint" id="toNote" style="display:none">Reactions opens after your first experience. Pick one to start.</p></div>
       <div class="duo">
         <div class="fld">
           <label for="fName">Name</label>
@@ -1289,7 +1289,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
     $('dPick2').addEventListener('change', function (e) { if (e.target && e.target.value) { otherISO = e.target.value; tickOther(); } });
     var qs = new URLSearchParams(location.search), to = qs.get('to'), when = qs.get('date');
     if (qs.get('for') === 'reactions') $('toNote').style.display = '';
-    if (to === 'club' || to === 'content' || to === 'catalyst') {
+    if (to === 'club' || to === 'content') {
       setTo(to);
       if (when) {
         var name = to === 'club' ? 'sunday_pick' : 'other_pick', all = [].slice.call(document.querySelectorAll('input[name="' + name + '"]'));

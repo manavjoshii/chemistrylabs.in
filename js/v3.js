@@ -328,7 +328,7 @@
       var els = [];
       sundaysFrom(13).forEach(function (d, w) { var cs = citiesOn(d); if (!cs.length && w < 4 && !CITY.closedAt(d)) { els.push({ d: d, kind: 'club', s: 'Bc', name: 'Build Club', sub: 'City soon, 10 AM', href: '/apply/?to=club&date=' + d }); return; } if (cs.length) els.push({ d: d, kind: 'club', s: SYM[cs[0]] || cs[0].slice(0, 2), name: 'Build Club', sub: cs.join(' & ') + ', 10 AM', href: '/apply/?to=club&date=' + d, first: cs[0] }); });
       PR.forEach(function (p) { if (p.date && p.date >= today) els.push({ d: p.date, kind: 'practical', s: SYM[p.id] || p.name.slice(0, 2), name: nameOf(p), sub: p.city + ', ' + p.time, href: hrefOf(p), first: p.city }); });
-      for (var mo = 1; mo <= 3; mo++) { var md = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + mo, 1)).toISOString().slice(0, 10); els.push({ d: md, kind: 'vc', s: 'Vc', name: 'Venture Catalyst', sub: 'First week', href: '/apply/?to=catalyst&date=' + md, month: true, top: '1\u20137' }); }
+      for (var mo = 1; mo <= 3; mo++) { var md = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + mo, 1)).toISOString().slice(0, 10); els.push({ d: md, kind: 'vc', s: 'Vc', name: 'Venture Catalyst', sub: 'First week', href: '/venture-catalyst/', month: true, top: '1\u20137' }); }
       els.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; });
       var peek = document.querySelector('.peek'), PHOTO = { Ahmedabad: '/img/rooms/a24.webp', Mumbai: '/img/rooms/m38.webp', Jaipur: '/img/rooms/j21.webp', Surat: '/img/rooms/s7.webp' };
       var cell = function (x, i, box) {

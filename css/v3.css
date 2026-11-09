@@ -654,6 +654,4 @@ html[data-to=club]{--to:var(--sun)}html[data-to=content]{--to:var(--pink)}html[d
 .tabs__e{display:block;width:clamp(24px,1.8vw,26px);height:auto;transition:transform .2s var(--ease);-webkit-user-drag:none}
 .tabs a:hover .tabs__e,.tabs a.is-here .tabs__e,.tabs a[aria-current] .tabs__e{transform:translateY(-2px)}
 .flow__say{margin-top:clamp(12px,1.8vw,22px)}
-#vcNote{display:none}
-html[data-to="catalyst"] #vcNote{display:block}
 .feast__note{white-space:nowrap}
