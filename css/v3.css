@@ -677,3 +677,5 @@ html{scroll-snap-type:y proximity}
   .lost{grid-template-columns:minmax(0,1fr);align-content:center;gap:clamp(14px,2.4vh,24px)}
   .lost .machine{justify-self:center;width:calc(100% + 2*var(--rail) - 12px);margin-inline:calc(6px - var(--rail))}
 }
+
+.invite__members{margin-top:12px;max-width:34em;font-size:1rem;line-height:1.45}.invite__members p{margin:0 0 8px}.invite__members a{text-decoration:underline}
