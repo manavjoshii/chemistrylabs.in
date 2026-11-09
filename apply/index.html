@@ -307,7 +307,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
   var now = new Date();
   var sunday = new Date(now);
   sunday.setDate(now.getDate() + ((7 - now.getDay()) % 7));
-  if (now.getDay() === 0 && now.getHours() >= 13) { sunday.setDate(sunday.getDate() + 7); }
+  if (now.getDay() === 0 && now.getHours() >= 14) { sunday.setDate(sunday.getDate() + 7); }
   sunday.setHours(0, 0, 0, 0);
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var mon = MONTHS[sunday.getMonth()];
