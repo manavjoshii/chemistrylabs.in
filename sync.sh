@@ -1,6 +1,7 @@
 #!/bin/sh
 # chemistrylabs.in serves the site built in ~/chemistry-labs-site (since 2026-11-04).
 # This rebuilds it, copies only what is published, and pushes. Run it after every change.
+# time/ is the Pass the turn timer, kept only in this repo.
 # identity/, tools/ and DESIGN.md stay private. team/ is the team hub (~/team-hub/public);
 # this script never touches it.
 set -e
@@ -8,7 +9,7 @@ SRC=~/chemistry-labs-site
 cd "$(dirname "$0")"
 git pull -q --rebase --autostash origin main
 python3 "$SRC/tools/build.py" > /dev/null
-find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md ! -name team -exec rm -rf {} +
+find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md ! -name team ! -name time -exec rm -rf {} +
 for d in index.html 404.html robots.txt sitemap.xml apply build-club practicals venture-catalyst calendar terms refunds privacy contact css fonts img; do cp -R "$SRC/$d" .; done
 mkdir -p js && cp "$SRC/js/v3.js" "$SRC/js/s.js" js/
 # The date tables stay on manavjoshi.com, one source of truth, so a date changed there shows here too.
