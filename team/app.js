@@ -313,7 +313,7 @@ function draw() {
   q("[data-homeadd]", (e) => open("homeadd", e.currentTarget));
   wireHome();
   if (firstPaint) { firstPaint = false; animate(); }
-  if (!d.me.owner && !d.me.external && !H().welcomed && !welcomeShown) { welcomeShown = true; welcome(); return; }
+  if (!d.me.external && !H().welcomed && !welcomeShown) { welcomeShown = true; welcome(); return; }
   if (d.account?.temp && !pwOffered) { pwOffered = true; open("password", app.querySelector(".hello")); }
 }
 
