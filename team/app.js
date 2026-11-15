@@ -694,6 +694,30 @@ const evName = (e) => `${e.title}${e.place ? ", " + e.place : ""}`;
 const TICK = `<svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.8"/></svg>`;
 let taskFor = "", otherTasks = null, goalDraft = null, goalOpen = false, calMonth = null, calDay = null, editing = false, welcomeShown = false;
 
+/* BUILD CLUB DATES COME FROM THE WEBSITE (16 Nov): "Everyone should see the latest build
+   club calendar which is now uploaded on the website." The website's calendar reads one
+   file, manavjoshi.com/js/smbc-cities.js, and so does this page, so the two never disagree.
+   The CRM only adds how many seats are paid. If the file can't load, the CRM's rooms show. */
+function allEvents() {
+  const ev = H().events, C = window.SMBC_CITY;
+  if (!C || typeof C.cities !== "function") return ev;
+  const crm = ev.filter((e) => e.kind === "build");
+  const from = addD(D.today, -45), to = addD(D.today, 120), site = [];
+  let d = from;
+  while (new Date(d + "T00:00:00Z").getUTCDay() !== 0) d = addD(d, 1);
+  for (; d <= to; d = addD(d, 7)) {
+    const closed = C.closedAt ? C.closedAt(d) : "";
+    for (const city of C.cities(d)) {
+      const room = crm.find((e) => e.day === d && (e.place || "").toLowerCase() === city.toLowerCase());
+      site.push({ day: d, time: "10:00", kind: "build", title: "Build Club", place: city, crm: !!room, sold: room?.sold, chairs: room?.chairs });
+    }
+    if (closed) site.push({ day: d, kind: "other", title: `No Build Club: ${closed}` });
+  }
+  if (!site.length) return ev;
+  return ev.filter((e) => e.kind !== "build").concat(site)
+    .sort((a, b) => a.day.localeCompare(b.day) || String(a.time || "").localeCompare(String(b.time || "")));
+}
+
 /* One list: their own tasks and their project steps, since a step is a task too. */
 function allTasks(list) {
   const own = (list || H().tasks).map((t) => ({ ...t, kind: "task" }));
@@ -717,7 +741,7 @@ function tasksTile() {
 
 function eventsTile() {
   if (D.me.external) return "";
-  const ev = H().events, days = [...Array(7)].map((_, i) => addD(D.today, i));
+  const ev = allEvents(), days = [...Array(7)].map((_, i) => addD(D.today, i));
   const next = ev.filter((e) => e.day >= D.today).slice(0, 3);
   return `<button class="tile w4 h2 whats" data-open="events"><span class="t-label"><em>🗓️</em>What's on</span>
     <span class="wk">${days.map((d) => { const t = new Date(d + "T00:00:00Z"), es = ev.filter((e) => e.day === d);
@@ -934,7 +958,7 @@ Object.assign(PAGES, {
   },
 
   events() {
-    const ev = H().events;
+    const ev = allEvents();
     if (!calMonth) calMonth = D.today.slice(0, 7);
     if (!calDay) calDay = D.today;
     const [y, m] = calMonth.split("-").map(Number);
@@ -946,7 +970,7 @@ Object.assign(PAGES, {
     }));
     const onDay = ev.filter((e) => e.day === calDay);
     const ahead = ev.filter((e) => e.day >= D.today).slice(0, 12);
-    const row = (e) => `<li><u class="kbar k-${e.kind}"></u><span class="txt">${esc(evName(e))}<span class="meta">${esc(KCOL[e.kind] || e.kind)}${e.time ? " · " + esc(e.time) : ""}${e.crm ? ` · from the CRM${e.chairs ? `, ${e.sold} of ${e.chairs} paid` : ""}` : ""}</span></span>
+    const row = (e) => `<li><u class="kbar k-${e.kind}"></u><span class="txt">${esc(evName(e))}<span class="meta">${esc(KCOL[e.kind] || e.kind)}${e.time ? " · " + esc(e.time) : ""}${e.chairs ? ` · ${e.sold} of ${e.chairs} paid` : e.crm ? " · from the CRM" : ""}</span></span>
       ${e.mine && e.id ? `<button class="x" data-evdel="${e.id}" aria-label="Take ${esc(e.title)} off the calendar">×</button>` : ""}</li>`;
     const mName = new Date(first + "T00:00:00Z").toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
     return `<div class="icon">🗓️</div><h2>What's on</h2>
@@ -961,7 +985,7 @@ Object.assign(PAGES, {
           <div class="steprow"><input name="day" type="date" value="${esc(calDay >= D.today ? calDay : D.today)}" required aria-label="Day"><input name="time" type="time" aria-label="Time"></div>
           <label class="f"><span>Where (optional)</span><input name="place" maxlength="80" placeholder="Ahmedabad, or online"></label>
           <p class="err" data-everr></p><button class="btn green">Add it</button></form>
-        <p class="t-sub">Build Clubs and practicals come from the CRM on their own. Add anything else: Reactions, Catalyst sessions, team days.</p></details>
+        <p class="t-sub">Build Clubs come from the website's calendar and practicals from the CRM, on their own. Add anything else: Reactions, Catalyst sessions, team days.</p></details>
       <p class="block-h">Coming up</p>${ahead.length ? `<ul class="rows">${ahead.map((e) => row({ ...e, title: `${when(e.day)} · ${e.title}` })).join("")}</ul>` : `<p class="t-sub">Nothing ahead yet.</p>`}`;
   },
 
@@ -1114,7 +1138,7 @@ function welcomeCards() {
       `Got something big? Write it as a goal with a deadline, and the hub breaks it into small dated tasks you can start today. You can change any of them before they're saved.`,
       `I can add to your list too. Those say "From Manav".${d.steps?.length ? " Your project steps show up here as well." : ""}`] },
     { icon: "🗓️", h: "What's on", p: [`Everything we're doing, on one calendar: Build Clubs, practicals, Venture Catalyst sessions and Reactions.`,
-      `Build Clubs and practicals come straight from the CRM. Reactions happen on our WhatsApp community, so add them here yourself and the whole team sees them.`] },
+      `Build Clubs come straight from the website's calendar, and practicals from the CRM. Reactions happen on our WhatsApp community, so add them here yourself and the whole team sees them.`] },
   ];
   if (f) cards.push({ icon: "🚀", h: "Your founders", p: [`Every Catalyst founder, by stage: to call, call booked, talked, confirmed, contract sent, signed or declined.`,
     `It reads your contacts sheet, so when you change a founder's Status there, they move here on their own. The contract generator and the sheet are one tap away.`,
