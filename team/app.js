@@ -288,24 +288,32 @@ const addTile = () => `<button class="tile round add" data-open="add" aria-label
 
 /* ── the home screen ───────────────────────────────────────────────────── */
 function draw() {
-  const d = D, owner = d.me.owner;
-  const tiles = owner
-    ? [peopleTile(), revenueTile(), alarmTile(), websiteTile(), calTile(true), teamTile(), projectsTile(), roomTile(), stepsTile(true), attendTile(), agreementsTile(), crmTile(), addTile()]
-    : d.me.external
-      ? [mineTile(), alarmTile(), calTile(false), jobTile(), stepsTile(true)]
-    : d.cal
-      ? [peopleTile(), mineTile(), alarmTile(), calTile(false), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()]
-      : [peopleTile(), mineTile(), alarmTile(), attendTile(), contactsTile(), agreementsTile(), stepsTile(true), roomTile(), crmTile(), jobTile(), addTile()];
-  app.innerHTML = `<div class="wall"></div><div class="screen">
-    <header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
-      <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b>${d.account ? `<button class="linkish" data-open="password" style="font-size:13px">Change password</button>` : ""}</div></header>
+  const d = D;
+  const t = homeTiles(d);
+  /* Editing: every tile wiggles and carries a minus, the way a phone's home screen does. */
+  const tiles = t.order.map((id) => {
+    const h = t.html[id];
+    if (!editing || id === "add") return h;
+    const at = h.indexOf(">");
+    return h.slice(0, at + 1) + `<span class="minus" data-minus="${esc(id)}" role="button" tabindex="0" aria-label="Hide ${esc(TILE_NAMES[id] || "this link")}">−</span>` + h.slice(at + 1);
+  });
+  app.innerHTML = `<div class="wall"></div><div class="screen${editing ? " editing" : ""}">
+    ${editing
+      ? `<header class="top edit-top"><button class="btn small ghost" data-homeadd>+ Add</button><span class="t-sub">Drag to move. Tap − to hide.</span><button class="btn small" data-editdone>Done</button></header>`
+      : `<header class="top"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
+      <div class="hello">${esc(d.month.name)}<b>${esc(d.me.name)}</b><span class="hello-acts">${d.me.external ? "" : `<button class="linkish" data-edit-home>Edit home</button><button class="linkish" data-how>How this works</button>`}${d.account ? `<button class="linkish" data-open="password">Change password</button>` : ""}</span></div></header>`}
     ${d.sample ? `<p class="sample">Test copy of the CRM, frozen at ${esc(day(d.today))}. Not today's numbers.</p>` : ""}
     <main class="grid">${tiles.join("")}</main></div>`;
-  app.querySelectorAll("[data-open]").forEach((t) => t.addEventListener("click", () => open(t.dataset.open, t)));
+  app.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => open(el.dataset.open, el)));
   app.querySelectorAll("[data-agree]").forEach((b) => b.addEventListener("click", openAgreements));
   app.querySelectorAll("[data-day]").forEach((v) => v.addEventListener("click", () => open("day", v, v.dataset.day)));
   app.querySelectorAll("[data-crm-ask]").forEach((b) => b.addEventListener("click", async () => { try { await api("/api/crm/request", {}); D.crmAsk.asked = true; draw(); } catch (e) { alert(e.message); } }));
+  const q = (sel, fn) => { const el = app.querySelector(sel); if (el) el.addEventListener("click", fn); };
+  q("[data-edit-home]", enterEdit); q("[data-editdone]", leaveEdit); q("[data-how]", welcome);
+  q("[data-homeadd]", (e) => open("homeadd", e.currentTarget));
+  wireHome();
   if (firstPaint) { firstPaint = false; animate(); }
+  if (!d.me.owner && !d.me.external && !H().welcomed && !welcomeShown) { welcomeShown = true; welcome(); return; }
   if (d.account?.temp && !pwOffered) { pwOffered = true; open("password", app.querySelector(".hello")); }
 }
 
@@ -506,6 +514,7 @@ function open(name, from, arg) {
   const paint = () => {
     page.innerHTML = `<div class="grab"></div>${PAGES[name](arg)}`;
     wirePage(page, close, paint);
+    wireHomePage(page, close, paint, name);
     if (name === "add") addForm(page, close);
     page.querySelectorAll("[data-report]").forEach((b) => b.addEventListener("click", async () => {
       const f = $("#webframe", page), st = $("#webstatus", page);
@@ -672,4 +681,510 @@ function load() {
   app.innerHTML = `<div class="wall"></div>`;
   refresh();
 }
-load();
+/* ── the quick-access home (15 Nov) ───────────────────────────────────────
+   "Exactly like how I use on my iPhone." Tasks and What's on are widgets you
+   can act on without opening them. Press and hold any tile to move, hide or add
+   things, the way a phone's home screen edits. Links are app icons. Everything
+   on it has a date. */
+const H = () => D.home || { tasks: [], goals: [], events: [], links: [], kinds: {}, welcomed: true };
+const addD = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+const when = (d) => (!d ? "No date yet" : d === D.today ? "Today" : d === addD(D.today, 1) ? "Tomorrow" : d === addD(D.today, -1) ? "Yesterday" : day(d));
+const KCOL = { build: "Build Club", practical: "Practical", catalyst: "Catalyst session", reactions: "Reactions", other: "Other" };
+const evName = (e) => `${e.title}${e.place ? ", " + e.place : ""}`;
+const TICK = `<svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.8"/></svg>`;
+let taskFor = "", otherTasks = null, goalDraft = null, goalOpen = false, calMonth = null, calDay = null, editing = false, welcomeShown = false;
+
+/* One list: their own tasks and their project steps, since a step is a task too. */
+function allTasks(list) {
+  const own = (list || H().tasks).map((t) => ({ ...t, kind: "task" }));
+  const steps = list ? [] : (D.steps || []).map((s) => ({ id: s.id, title: s.title, due: s.due || "", done: false, kind: "step", project: s.project }));
+  return own.concat(steps).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || a.id - b.id);
+}
+const goalOf = (t) => (t.goal ? H().goals.find((g) => g.id === t.goal) : null);
+const metaOf = (t) => [t.project && `Step in ${t.project}`, goalOf(t) && `Goal: ${goalOf(t).title}`, t.from && `From ${t.from}`].filter(Boolean).join(" · ");
+
+function tasksTile() {
+  const open = allTasks().filter((t) => !t.done);
+  const late = open.filter((t) => t.due && t.due < D.today).length, today = open.filter((t) => t.due === D.today).length;
+  const top = open.filter((t) => t.due).slice(0, 4);
+  return `<div class="tile w4 h2 tasks" data-open="tasks" role="button" tabindex="0">
+    <span class="t-label"><em>✅</em>Tasks<span class="tk-count">${late ? `<b class="bad">${late} late</b> · ` : ""}${today} today</span></span>
+    <ul class="tk-list">${top.map((t) => `<li class="${t.due < D.today ? "late" : ""}"><button class="tick mini" data-tick="${t.kind}:${t.id}" aria-label="Mark done: ${esc(t.title)}">${TICK}</button>
+      <span class="tk-t">${esc(t.title)}<small>${esc(when(t.due))}${t.project ? " · " + esc(t.project) : ""}</small></span></li>`).join("")
+      || `<li class="tk-empty">Nothing due. Tap to add a task, or write down a big goal and break it into steps.</li>`}</ul>
+    ${open.length > top.length ? `<span class="t-sub">${open.length - top.length} more</span>` : ""}</div>`;
+}
+
+function eventsTile() {
+  if (D.me.external) return "";
+  const ev = H().events, days = [...Array(7)].map((_, i) => addD(D.today, i));
+  const next = ev.filter((e) => e.day >= D.today).slice(0, 3);
+  return `<button class="tile w4 h2 whats" data-open="events"><span class="t-label"><em>🗓️</em>What's on</span>
+    <span class="wk">${days.map((d) => { const t = new Date(d + "T00:00:00Z"), es = ev.filter((e) => e.day === d);
+      return `<span class="wd${d === D.today ? " now" : ""}"><small>${WD[t.getUTCDay()]}</small><b>${t.getUTCDate()}</b><i>${es.slice(0, 3).map((e) => `<u class="k-${e.kind}"></u>`).join("")}</i></span>`; }).join("")}</span>
+    <span class="up">${next.map((e) => `<span class="up-r"><u class="k-${e.kind}"></u><span>${esc(evName(e))}</span><small>${esc(when(e.day))}${e.time ? " " + esc(e.time) : ""}</small></span>`).join("")
+      || `<span class="t-sub">Nothing on the calendar yet. Tap to add the next thing.</span>`}</span></button>`;
+}
+
+function foundersTile() {
+  const f = H().founders; if (!f) return "";
+  const live = f.stages.filter((s) => s.key !== "declined"), n = (k) => f.list.filter((x) => x.stage === k).length;
+  const first = live.find((s) => s.next && n(s.key));
+  return `<button class="tile w4 founders" data-open="founders"><span class="t-label"><em>🚀</em>Catalyst founders<span class="tk-count">${n("signed")} signed</span></span>
+    <span class="fbar">${live.map((s) => n(s.key) ? `<i class="st-${s.key}" style="flex:${n(s.key)}"></i>` : "").join("")}</span>
+    <span class="t-sub">${first ? `Next: ${esc(first.next.toLowerCase())}, ${n(first.key)} ${n(first.key) === 1 ? "founder" : "founders"}` : "Every founder has signed or declined."} · ${live.filter((s) => n(s.key)).map((s) => `${n(s.key)} ${s.label.toLowerCase()}`).join(", ")}</span></button>`;
+}
+
+const linkTile = (l) => `<a class="tile app" data-tile="link:${esc(l.id)}" href="${esc(l.url)}" target="_blank" rel="noopener"><span class="app-ic">${esc(l.icon || "🔗")}</span><span class="app-l">${esc(l.label)}</span></a>`;
+
+/* Which tiles exist for this person, and the order they start in. Saved layouts win. */
+function homeTiles(d) {
+  const owner = d.me.owner;
+  const base = owner
+    ? ["people", "revenue", "alarm", "tasks", "events", "website", "social", "team", "projects", "founders", "room", "steps", "attend", "agreements", "crm", "add"]
+    : d.me.external ? ["mine", "alarm", "social", "jobs", "steps"]
+    : d.cal ? ["people", "mine", "alarm", "tasks", "events", "social", "crm", "room", "jobs", "steps", "add"]
+    : ["people", "mine", "alarm", "tasks", "founders", "events", "attend", "contacts", "agreements", "crm", "room", "jobs", "steps", "add"];
+  const make = { people: peopleTile, revenue: revenueTile, mine: mineTile, alarm: alarmTile, website: websiteTile, social: () => calTile(owner),
+    team: teamTile, projects: projectsTile, room: roomTile, steps: () => stepsTile(true), attend: attendTile, contacts: contactsTile,
+    agreements: agreementsTile, crm: crmTile, jobs: jobTile, add: addTile, tasks: d.me.external ? () => "" : tasksTile, events: eventsTile, founders: foundersTile };
+  const html = {};
+  for (const id of base) {
+    let h = ""; try { h = make[id]() || ""; } catch (e) { console.error(id, e); }
+    if (h) html[id] = h.replace(/class="tile/, `data-tile="${id}" class="tile`);
+  }
+  if (!d.me.external) for (const l of H().links) html["link:" + l.id] = linkTile(l);
+  const ids = Object.keys(html);
+  const saved = H().layout;
+  /* Your steps now sit inside Tasks, so a teammate starts without the separate tile. */
+  const hidden = new Set(saved ? saved.hidden : owner ? [] : ["steps"]);
+  const fresh = ids.filter((x) => x !== "add").concat(html.add ? ["add"] : []);
+  const order = saved ? saved.order.filter((x) => html[x]).concat(fresh.filter((x) => !saved.order.includes(x))) : fresh;
+  return { html, order: order.filter((x) => !hidden.has(x)), hidden: ids.filter((x) => hidden.has(x)) };
+}
+const TILE_NAMES = { people: "People in rooms", revenue: "Revenue", mine: "Your number", alarm: "What needs you", website: "Website this week", social: "Social calendar",
+  team: "Team", projects: "Projects", room: "Next room", steps: "Your steps", attend: "Catalyst attendance", contacts: "Catalyst contacts sheet",
+  agreements: "Contract generator", crm: "CRM", jobs: "Job list", add: "New project", tasks: "Tasks", events: "What's on", founders: "Catalyst founders" };
+
+async function saveLayout(order, hidden) {
+  D.home.layout = { order, hidden };
+  try { await api("/api/home", { layout: D.home.layout }); } catch (e) { alert(e.message); }
+}
+async function saveLinks(links) {
+  D.home.links = links; draw();
+  try { await api("/api/home", { links }); } catch (e) { alert(e.message); }
+}
+
+/* ── wiring the home: ticks on the widget, press and hold to edit, drag to move ── */
+let swallow = false;
+function wireHome() {
+  const grid = $(".grid", app); if (!grid) return;
+  grid.querySelectorAll("[data-tick]").forEach((b) => b.addEventListener("click", async (e) => {
+    e.stopPropagation(); e.preventDefault();
+    if (editing) return;
+    const [kind, id] = b.dataset.tick.split(":");
+    b.classList.add("on"); if (navigator.vibrate) navigator.vibrate(10);
+    const li = b.closest("li"); if (li) li.classList.add("going");
+    try { await api(kind === "step" ? "/api/step" : "/api/task", { id: Number(id), done: true }); setTimeout(refresh, 380); } catch (err) { alert(err.message); b.classList.remove("on"); }
+  }));
+  grid.querySelectorAll("[data-tile]").forEach((el) => el.addEventListener("pointerdown", (e) => press(e, el, grid)));
+  grid.querySelectorAll("[data-minus]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); minus(b.dataset.minus); }));
+}
+/* Clicks that end a press-and-hold, or land on a tile while editing, do nothing. */
+app.addEventListener("click", (e) => {
+  if (swallow) { swallow = false; e.preventDefault(); e.stopPropagation(); return; }
+  if (!editing) return;
+  const t = e.target.closest("[data-tile]");
+  if (!t || e.target.closest("[data-minus]")) return;
+  e.preventDefault(); e.stopPropagation();
+  if (t.dataset.tile.startsWith("link:")) open("link", t, t.dataset.tile.slice(5));
+}, true);
+app.addEventListener("contextmenu", (e) => { if (e.target.closest("[data-tile]")) e.preventDefault(); });
+let drag = null;
+document.addEventListener("touchmove", (e) => { if (drag?.on) e.preventDefault(); }, { passive: false });
+
+function press(e, el, grid) {
+  if (e.button > 0 || e.target.closest("[data-minus]")) return;
+  const x0 = e.clientX, y0 = e.clientY, touch = e.pointerType !== "mouse";
+  const st = { el, x0, y0, on: false, moved: false, id: e.pointerId };
+  drag = st;
+  /* Not editing: a long press opens edit mode. Editing: a short hold (touch) or a small move (mouse) picks the tile up. */
+  st.timer = setTimeout(() => {
+    if (st.moved) return;
+    if (!editing) { swallow = true; if (navigator.vibrate) navigator.vibrate(15); enterEdit(); drag = null; return; }
+    if (touch) pickUp(st);
+  }, editing ? 160 : 520);
+  const move = (ev) => {
+    if (ev.pointerId !== st.id) return;
+    const dx = ev.clientX - x0, dy = ev.clientY - y0;
+    if (!st.on) {
+      if (Math.hypot(dx, dy) > 8) { st.moved = true; if (editing && !touch) pickUp(st); else if (!st.on) clearTimeout(st.timer); }
+      if (!st.on) return;
+    }
+    follow(st, ev, grid);
+  };
+  const up = (ev) => {
+    if (ev.pointerId !== st.id) return;
+    clearTimeout(st.timer);
+    removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+    if (st.on) drop(st, grid);
+    drag = null;
+    /* The click that ends a hold or a drag is swallowed; nothing after it is. */
+    if (swallow) setTimeout(() => { swallow = false; }, 60);
+  };
+  addEventListener("pointermove", move); addEventListener("pointerup", up); addEventListener("pointercancel", up);
+}
+function pickUp(st) {
+  st.on = true; swallow = true;
+  const r = st.el.getBoundingClientRect();
+  st.gx = st.x0 - r.left; st.gy = st.y0 - r.top;
+  st.el.classList.add("lifted");
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+function follow(st, ev, grid) {
+  const el = st.el;
+  const others = [...grid.querySelectorAll("[data-tile]")].filter((x) => x !== el);
+  const over = others.find((o) => { const r = o.getBoundingClientRect(); return ev.clientX > r.left && ev.clientX < r.right && ev.clientY > r.top && ev.clientY < r.bottom; });
+  if (over && over !== st.last) {
+    st.last = over;
+    const before = new Map(others.map((o) => [o, o.getBoundingClientRect()]));
+    const all = [...grid.querySelectorAll("[data-tile]")];
+    if (all.indexOf(el) > all.indexOf(over)) grid.insertBefore(el, over); else grid.insertBefore(el, over.nextSibling);
+    /* The others slide to their new places instead of jumping. */
+    if (motion) for (const o of others) {
+      const a = before.get(o), b = o.getBoundingClientRect();
+      if (a.left === b.left && a.top === b.top) continue;
+      o.style.transition = "none"; o.style.translate = `${a.left - b.left}px ${a.top - b.top}px`;
+      requestAnimationFrame(() => { o.style.transition = ""; o.style.translate = ""; });
+    }
+  } else if (!over) st.last = null;
+  el.style.translate = "0 0";
+  const r = el.getBoundingClientRect();
+  el.style.translate = `${ev.clientX - st.gx - r.left}px ${ev.clientY - st.gy - r.top}px`;
+}
+function drop(st, grid) {
+  st.el.classList.remove("lifted");
+  st.el.style.translate = "";
+  const order = [...grid.querySelectorAll("[data-tile]")].map((x) => x.dataset.tile);
+  const t = homeTiles(D);
+  saveLayout(order.concat(t.hidden.filter((x) => !order.includes(x))).filter((x, i, a) => a.indexOf(x) === i), t.hidden);
+}
+function enterEdit() { editing = true; draw(); }
+function leaveEdit() { editing = false; draw(); }
+function minus(id) {
+  if (id.startsWith("link:")) {
+    const l = H().links.find((x) => "link:" + x.id === id);
+    if (l && confirm(`Remove the ${l.label} link?`)) saveLinks(H().links.filter((x) => x !== l));
+    return;
+  }
+  const t = homeTiles(D);
+  saveLayout(t.order.filter((x) => x !== id), t.hidden.concat(id));
+  draw();
+}
+
+/* ── pages ── */
+function taskRow(t) {
+  const late = t.due && t.due < D.today && !t.done;
+  return `<li class="tk-row${t.done ? " done" : ""}" data-task="${t.kind}:${t.id}">
+    <button class="tick${t.done ? " on" : ""}" data-done aria-label="${t.done ? "Mark not done" : "Mark done"}: ${esc(t.title)}">${TICK}</button>
+    <span class="txt">${t.kind === "task" ? `<span class="tk-title" data-edit tabindex="0">${esc(t.title)}</span>` : esc(t.title)}
+      ${metaOf(t) ? `<span class="meta">${esc(metaOf(t))}</span>` : ""}</span>
+    ${t.kind === "task" ? `<label class="when${late ? " bad" : ""}">${esc(when(t.due))}<input type="date" value="${esc(t.due)}" data-due aria-label="Change the date"></label>
+      <button class="x" data-remove aria-label="Delete: ${esc(t.title)}">×</button>` : `<span class="when${late ? " bad" : ""}">${esc(when(t.due))}</span>`}</li>`;
+}
+function bucketed(list) {
+  const open = list.filter((t) => !t.done), wk = addD(D.today, 6);
+  const groups = [
+    ["Late", open.filter((t) => t.due && t.due < D.today)],
+    ["Today", open.filter((t) => t.due === D.today)],
+    ["This week", open.filter((t) => t.due > D.today && t.due <= wk)],
+    ["Later", open.filter((t) => t.due > wk)],
+    ["Needs a date. Ask Manav for one", open.filter((t) => !t.due)],
+    ["Done", list.filter((t) => t.done)],
+  ].filter(([, g]) => g.length);
+  return groups.map(([h, g]) => `<p class="block-h${h === "Late" ? " bad" : ""}">${h}</p><ul class="rows tk-rows">${g.map(taskRow).join("")}</ul>`).join("")
+    || `<p class="t-sub" style="padding:10px 0">Nothing on the list. Add the first thing you'll do, with its day.</p>`;
+}
+
+Object.assign(PAGES, {
+  tasks() {
+    const owner = D.me.owner, people = H().people || [];
+    const list = taskFor && otherTasks ? allTasks(otherTasks) : allTasks();
+    const whose = taskFor ? people.find((p) => p.handle === taskFor)?.name || taskFor : "";
+    const g = goalDraft;
+    return `<div class="icon">✅</div><h2>${whose ? `${esc(whose.split(" ")[0])}'s tasks` : "Tasks"}</h2>
+      ${owner && people.length ? `<div class="chips" data-for>${[["", "Mine"], ...people.map((p) => [p.handle, p.name.split(" ")[0]])].map(([h, n]) => `<button type="button" class="${taskFor === h ? "on" : ""}" data-h="${h}">${esc(n)}</button>`).join("")}</div>` : ""}
+      <form class="tk-add" data-addtask><input name="t" placeholder="${whose ? `Add a task for ${esc(whose.split(" ")[0])}` : "Add a task"}" autocomplete="off" maxlength="160" required>
+        <input name="d" type="date" value="${esc(D.today)}" min="${esc(D.today)}" required aria-label="Due date"><button class="btn green small">Add</button></form>
+      <p class="err" data-taskerr></p>
+      <div class="goalbox${goalOpen ? " open" : ""}">
+        <button type="button" class="goal-h" data-goaltoggle><span>🎯</span><b>Break down a big goal</b><small>${goalOpen ? "Close" : "It turns into small dated tasks"}</small></button>
+        ${goalOpen ? `<form data-goalform><label class="f"><span>The goal</span><input name="g" value="${esc(g?.title || "")}" placeholder="Run three practicals in December" maxlength="200" required></label>
+          <label class="f"><span>Deadline</span><input name="gd" type="date" value="${esc(g?.due || addD(D.today, 21))}" min="${esc(addD(D.today, 1))}" required></label>
+          <button class="btn small" ${g?.loading ? "disabled" : ""}>${g?.loading ? "Breaking it down…" : g?.tasks ? "Break it down again" : "Break it down"}</button></form>
+          <p class="err">${esc(g?.err || "")}</p>
+          ${g?.tasks ? `<p class="block-h">Keep, change or drop any of these</p><div data-draft>${g.tasks.map((t, i) => `<div class="draft" data-i="${i}">
+            <input value="${esc(t.title)}" data-dt maxlength="160" aria-label="Task ${i + 1}"><input type="date" value="${esc(t.due)}" data-dd min="${esc(D.today)}" max="${esc(g.due)}" aria-label="Date for task ${i + 1}">
+            <button type="button" class="x" data-drop aria-label="Drop this one">×</button></div>`).join("")}</div>
+            <div class="acts"><button class="btn green" data-keep>Add ${g.tasks.length} ${g.tasks.length === 1 ? "task" : "tasks"}</button></div>` : ""}` : ""}
+      </div>
+      ${bucketed(list)}
+      ${!taskFor && H().goals.length ? `<p class="block-h">Goals</p><ul class="rows">${H().goals.map((x) => `<li><span class="txt">${esc(x.title)}<span class="meta">By ${esc(day(x.due))} · ${x.done} of ${x.total} done${x.by && x.by !== D.me.handle ? " · from Manav" : ""}</span></span>
+        <span class="ring-s" style="--p:${x.total ? x.done / x.total : 0}"></span><button class="x" data-goaldel="${x.id}" aria-label="Delete the goal ${esc(x.title)}">×</button></li>`).join("")}</ul>` : ""}`;
+  },
+
+  events() {
+    const ev = H().events;
+    if (!calMonth) calMonth = D.today.slice(0, 7);
+    if (!calDay) calDay = D.today;
+    const [y, m] = calMonth.split("-").map(Number);
+    const first = `${calMonth}-01`, lead = (new Date(first + "T00:00:00Z").getUTCDay() + 6) % 7;
+    const len = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells = [...Array(lead)].map(() => `<span></span>`).concat([...Array(len)].map((_, i) => {
+      const d = `${calMonth}-${String(i + 1).padStart(2, "0")}`, es = ev.filter((e) => e.day === d);
+      return `<button type="button" class="cd${d === D.today ? " now" : ""}${d === calDay ? " sel" : ""}${d < D.today ? " past" : ""}" data-cd="${d}"><b>${i + 1}</b><i>${es.slice(0, 3).map((e) => `<u class="k-${e.kind}"></u>`).join("")}</i></button>`;
+    }));
+    const onDay = ev.filter((e) => e.day === calDay);
+    const ahead = ev.filter((e) => e.day >= D.today).slice(0, 12);
+    const row = (e) => `<li><u class="kbar k-${e.kind}"></u><span class="txt">${esc(evName(e))}<span class="meta">${esc(KCOL[e.kind] || e.kind)}${e.time ? " · " + esc(e.time) : ""}${e.crm ? ` · from the CRM${e.chairs ? `, ${e.sold} of ${e.chairs} paid` : ""}` : ""}</span></span>
+      ${e.mine && e.id ? `<button class="x" data-evdel="${e.id}" aria-label="Take ${esc(e.title)} off the calendar">×</button>` : ""}</li>`;
+    const mName = new Date(first + "T00:00:00Z").toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    return `<div class="icon">🗓️</div><h2>What's on</h2>
+      <div class="legend">${Object.entries(KCOL).filter(([k]) => k !== "other").map(([k, n]) => `<span><u class="k-${k}"></u>${n}</span>`).join("")}</div>
+      <div class="mhead"><button type="button" class="linkish" data-mv="-1" aria-label="Last month">‹</button><b>${esc(mName)}</b><button type="button" class="linkish" data-mv="1" aria-label="Next month">›</button></div>
+      <div class="mgrid">${["M", "T", "W", "T", "F", "S", "S"].map((x) => `<small>${x}</small>`).join("")}${cells.join("")}</div>
+      <p class="block-h">${esc(when(calDay))}${calDay !== D.today && calDay !== addD(D.today, 1) ? "" : ", " + esc(day(calDay))}</p>
+      ${onDay.length ? `<ul class="rows">${onDay.map(row).join("")}</ul>` : `<p class="t-sub">Nothing on this day.</p>`}
+      <details class="fold add-ev"${ev.length ? "" : " open"}><summary>Add to the calendar</summary>
+        <form data-addev><div class="chips" data-kind>${Object.entries(KCOL).map(([k, n]) => `<button type="button" data-k="${k}" class="${k === "reactions" ? "on" : ""}">${n}</button>`).join("")}</div>
+          <label class="f"><span>What</span><input name="title" placeholder="Reactions: Saturday breakfast" maxlength="100" required></label>
+          <div class="steprow"><input name="day" type="date" value="${esc(calDay >= D.today ? calDay : D.today)}" required aria-label="Day"><input name="time" type="time" aria-label="Time"></div>
+          <label class="f"><span>Where (optional)</span><input name="place" maxlength="80" placeholder="Ahmedabad, or online"></label>
+          <p class="err" data-everr></p><button class="btn green">Add it</button></form>
+        <p class="t-sub">Build Clubs and practicals come from the CRM on their own. Add anything else: Reactions, Catalyst sessions, team days.</p></details>
+      <p class="block-h">Coming up</p>${ahead.length ? `<ul class="rows">${ahead.map((e) => row({ ...e, title: `${when(e.day)} · ${e.title}` })).join("")}</ul>` : `<p class="t-sub">Nothing ahead yet.</p>`}`;
+  },
+
+  founders() {
+    const f = H().founders, sheet = D.attend?.sheet;
+    const by = (k) => f.list.filter((x) => x.stage === k);
+    return `<div class="icon">🚀</div><h2>Catalyst founders</h2>
+      <div class="fstrip">${f.stages.map((s) => `<span class="st-${s.key}"><b>${by(s.key).length}</b><small>${esc(s.label)}</small></span>`).join("")}</div>
+      ${f.stages.filter((s) => by(s.key).length).map((s) => `<p class="block-h"><i class="sdot st-${s.key}"></i>${esc(s.label)}${s.next ? ` · next: ${esc(s.next.toLowerCase())}` : ""}</p>
+        <ul class="rows">${by(s.key).map((x) => `<li><span class="txt">${esc(x.name)}<span class="meta">${esc([x.company, x.city].filter(Boolean).join(" · "))}${x.terms ? ` · ${esc(x.terms)}` : ""}</span></span>
+          ${s.key === "confirmed" && D.agreements ? `<button class="btn small" data-agree>Agreement</button>` : ""}</li>`).join("")}</ul>`).join("")}
+      <div class="acts">${sheet ? `<a class="btn small" href="${esc(sheet)}" target="_blank" rel="noopener">Open the sheet ↗</a>` : ""}${D.agreements ? `<button class="btn small ghost" data-agree>New agreement</button>` : ""}
+        <button class="btn small ghost" data-fsync>Read the sheet now</button></div>
+      ${fold("How a founder moves", `This reads the Status column of the contacts sheet${f.at ? `, last at ${esc(new Date(f.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }))}` : ""}. Write one of these in it and they move here: <b>scheduled</b>, <b>talked</b>, <b>confirmed</b>, <b>contract sent</b>, <b>signed</b>, or <b>not joining</b>. A blank status means they still need a call.`)}`;
+  },
+
+  homeadd() {
+    const t = homeTiles(D);
+    return `<div class="icon">➕</div><h2>Add to your home</h2>
+      ${t.hidden.length ? `<p class="block-h">Tiles you've hidden</p><ul class="rows">${t.hidden.map((id) => `<li><span class="txt">${esc(TILE_NAMES[id] || id)}</span><button class="btn small" data-show="${esc(id)}">Add</button></li>`).join("")}</ul>` : ""}
+      <p class="block-h">A link you use often</p>
+      <form data-addlink><label class="f"><span>Name</span><input name="label" maxlength="28" placeholder="Practicals sheet" required></label>
+        <label class="f"><span>Link</span><input name="url" inputmode="url" autocapitalize="none" placeholder="https://" required></label>
+        <label class="f"><span>Icon (one emoji, optional)</span><input name="icon" maxlength="8" placeholder="📄"></label>
+        <p class="err" data-linkerr></p><button class="btn green">Add the link</button></form>`;
+  },
+
+  link(id) {
+    const l = H().links.find((x) => x.id === id); if (!l) return `<h2>That link is gone.</h2>`;
+    return `<div class="icon">${esc(l.icon || "🔗")}</div><h2>Edit link</h2>
+      <form data-editlink="${esc(id)}"><label class="f"><span>Name</span><input name="label" value="${esc(l.label)}" maxlength="28" required></label>
+        <label class="f"><span>Link</span><input name="url" inputmode="url" autocapitalize="none" value="${esc(l.url)}" required></label>
+        <label class="f"><span>Icon</span><input name="icon" value="${esc(l.icon || "")}" maxlength="8"></label>
+        <div class="acts"><button class="btn green">Save</button><button type="button" class="btn ghost" data-dellink>Remove</button></div></form>`;
+  },
+});
+
+/* Each page's own wiring, run after every paint. */
+function wireHomePage(page, close, paint, name) {
+  const redo = async () => { D = await api("/api/board"); if (taskFor) otherTasks = (await api("/api/tasks?for=" + taskFor)).tasks; draw(); paint(); };
+  if (name === "tasks") {
+    page.querySelectorAll("[data-for] button").forEach((b) => b.onclick = async () => {
+      taskFor = b.dataset.h; otherTasks = taskFor ? (await api("/api/tasks?for=" + taskFor)).tasks : null; goalDraft = null; paint();
+    });
+    const add = $("[data-addtask]", page);
+    add.onsubmit = async (e) => {
+      e.preventDefault();
+      try { await api("/api/task/add", { title: add.t.value, due: add.d.value, for: taskFor }); await redo(); $("[data-addtask] input", page)?.focus(); }
+      catch (err) { $("[data-taskerr]", page).textContent = err.message; }
+    };
+    $("[data-goaltoggle]", page).onclick = () => { goalOpen = !goalOpen; paint(); };
+    const gf = $("[data-goalform]", page);
+    if (gf) gf.onsubmit = async (e) => {
+      e.preventDefault();
+      goalDraft = { title: gf.g.value.trim(), due: gf.gd.value, loading: true }; paint();
+      try { const r = await api("/api/goal/plan", { title: goalDraft.title, due: goalDraft.due, for: taskFor }); goalDraft = { ...goalDraft, loading: false, tasks: r.tasks }; }
+      catch (err) { goalDraft = { ...goalDraft, loading: false, err: err.message }; }
+      paint();
+    };
+    const sync = () => page.querySelectorAll("[data-draft] .draft").forEach((row) => {
+      const t = goalDraft.tasks[Number(row.dataset.i)]; t.title = $("[data-dt]", row).value; t.due = $("[data-dd]", row).value;
+    });
+    page.querySelectorAll("[data-drop]").forEach((b) => b.onclick = () => { sync(); goalDraft.tasks.splice(Number(b.closest(".draft").dataset.i), 1); paint(); });
+    const keep = $("[data-keep]", page);
+    if (keep) keep.onclick = async () => {
+      sync();
+      try { await api("/api/goal", { title: goalDraft.title, due: goalDraft.due, tasks: goalDraft.tasks, for: taskFor }); goalDraft = null; goalOpen = false; await redo(); }
+      catch (err) { alert(err.message); }
+    };
+    page.querySelectorAll("[data-task]").forEach((li) => {
+      const [kind, id] = li.dataset.task.split(":"), path = kind === "step" ? "/api/step" : "/api/task";
+      $("[data-done]", li).onclick = async (e) => {
+        const b = e.currentTarget, on = !b.classList.contains("on"); b.classList.toggle("on", on);
+        if (on && navigator.vibrate) navigator.vibrate(10);
+        try { await api(path, { id: Number(id), done: on }); setTimeout(redo, 300); } catch (err) { alert(err.message); }
+      };
+      const due = $("[data-due]", li);
+      if (due) due.onchange = async () => { try { await api("/api/task", { id: Number(id), due: due.value }); await redo(); } catch (err) { alert(err.message); } };
+      const rm = $("[data-remove]", li);
+      if (rm) rm.onclick = async () => { li.classList.add("going"); try { await api("/api/task", { id: Number(id), remove: true }); setTimeout(redo, 250); } catch (err) { alert(err.message); } };
+      const ed = $("[data-edit]", li);
+      if (ed) ed.onclick = () => {
+        const inp = document.createElement("input"); inp.value = ed.textContent; inp.maxLength = 160; inp.className = "tk-in"; ed.replaceWith(inp); inp.focus();
+        const save = async () => { inp.onblur = null; const v = inp.value.trim(); if (v && v !== ed.textContent) { try { await api("/api/task", { id: Number(id), title: v }); } catch (err) { alert(err.message); } } redo(); };
+        inp.onblur = save; inp.onkeydown = (e) => { if (e.key === "Enter") inp.blur(); if (e.key === "Escape") { inp.onblur = null; paint(); } };
+      };
+    });
+    page.querySelectorAll("[data-goaldel]").forEach((b) => b.onclick = async () => {
+      if (!confirm("Delete this goal and its open tasks? Tasks already done stay done.")) return;
+      try { await api("/api/goal/remove", { id: Number(b.dataset.goaldel) }); await redo(); } catch (err) { alert(err.message); }
+    });
+  }
+  if (name === "events") {
+    page.querySelectorAll("[data-mv]").forEach((b) => b.onclick = () => {
+      const [y, m] = calMonth.split("-").map(Number), d = new Date(Date.UTC(y, m - 1 + Number(b.dataset.mv), 1));
+      calMonth = d.toISOString().slice(0, 7); paint();
+    });
+    page.querySelectorAll("[data-cd]").forEach((b) => b.onclick = () => { calDay = b.dataset.cd; paint(); });
+    let kind = "reactions";
+    page.querySelectorAll("[data-kind] button").forEach((b) => b.onclick = () => {
+      kind = b.dataset.k; page.querySelectorAll("[data-kind] button").forEach((x) => x.classList.toggle("on", x === b));
+    });
+    const f = $("[data-addev]", page);
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      try { await api("/api/event/add", { kind, title: f.title.value, day: f.day.value, time: f.time.value, place: f.place.value }); calDay = f.day.value; calMonth = calDay.slice(0, 7); await redo(); }
+      catch (err) { $("[data-everr]", page).textContent = err.message; }
+    };
+    page.querySelectorAll("[data-evdel]").forEach((b) => b.onclick = async () => {
+      try { await api("/api/event/remove", { id: Number(b.dataset.evdel) }); await redo(); } catch (err) { alert(err.message); }
+    });
+  }
+  if (name === "founders") {
+    page.querySelectorAll("[data-agree]").forEach((b) => b.onclick = openAgreements);
+    const s = $("[data-fsync]", page);
+    if (s) s.onclick = async () => { s.textContent = "Reading…"; try { await api("/api/home/founders", {}); await redo(); } catch (err) { alert(err.message); } };
+  }
+  if (name === "homeadd") {
+    page.querySelectorAll("[data-show]").forEach((b) => b.onclick = async () => {
+      const t = homeTiles(D), id = b.dataset.show;
+      await saveLayout(t.order.concat(id), t.hidden.filter((x) => x !== id)); draw(); paint();
+    });
+    const f = $("[data-addlink]", page);
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      let url = f.url.value.trim(); if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      const l = { id: Math.random().toString(36).slice(2, 9), label: f.label.value.trim(), url, icon: f.icon.value.trim() || "🔗" };
+      await saveLinks(H().links.concat(l)); close();
+    };
+  }
+  if (name === "link") {
+    const f = $("[data-editlink]", page); if (!f) return;
+    const id = f.dataset.editlink;
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      let url = f.url.value.trim(); if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      await saveLinks(H().links.map((l) => (l.id === id ? { ...l, label: f.label.value.trim(), url, icon: f.icon.value.trim() || "🔗" } : l))); close();
+    };
+    $("[data-dellink]", page).onclick = async () => { await saveLinks(H().links.filter((l) => l.id !== id)); close(); };
+  }
+}
+
+/* ── the welcome: the first time they sign in, and any time from "How this works" ── */
+function welcomeCards() {
+  const d = D, name = d.me.name.split(" ")[0], f = H().founders, crm = d.crm || d.crmAsk;
+  const cards = [
+    { icon: "👋", h: `Hello ${name}`, p: [`I built this for you. Everything you work on at Chemistry Labs now sits on one screen, on your phone.`,
+      `Give it two minutes now and it will save you a lot of looking for things later.`], sign: true },
+    { icon: "✅", h: "Your tasks", p: [`Everything here has a date. Add a task, pick its day, and tick it when it's done. You can tick straight from the home screen.`,
+      `Got something big? Write it as a goal with a deadline, and the hub breaks it into small dated tasks you can start today. You can change any of them before they're saved.`,
+      `I can add to your list too. Those say "From Manav".${d.steps?.length ? " Your project steps show up here as well." : ""}`] },
+    { icon: "🗓️", h: "What's on", p: [`Everything we're doing, on one calendar: Build Clubs, practicals, Venture Catalyst sessions and Reactions.`,
+      `Build Clubs and practicals come straight from the CRM. Reactions happen on our WhatsApp community, so add them here yourself and the whole team sees them.`] },
+  ];
+  if (f) cards.push({ icon: "🚀", h: "Your founders", p: [`Every Catalyst founder, by stage: to call, call booked, talked, confirmed, contract sent, signed or declined.`,
+    `It reads your contacts sheet, so when you change a founder's Status there, they move here on their own. The contract generator and the sheet are one tap away.`,
+    d.crm ? `Your CRM opens from here too, set up for Catalyst only.` : ""] });
+  else if (crm) cards.push({ icon: "📇", h: "Your CRM", p: [`The CRM opens from here, already signed in. Your number and your jobs sit right beside it, so you always know what moves things.`,
+    d.me.title === "Practicals" ? `Your CRM shows practicals. Add a date there and it lands on everyone's calendar here.` : ""] });
+  cards.push({ icon: "📱", h: "Make it yours", p: [`It works like your phone's home screen. Press and hold any tile, then drag it where you want it.`,
+    `Tap the minus to hide something, and the plus to bring it back or add a link you open every day. Your links sit on the home screen like apps.`,
+    `Your layout is yours alone. Nobody else's screen changes.`], last: true });
+  return cards.map((c) => ({ ...c, p: c.p.filter(Boolean) }));
+}
+function welcome() {
+  const cards = welcomeCards();
+  let i = 0;
+  const wrap = document.createElement("div");
+  wrap.className = "welcome"; wrap.setAttribute("role", "dialog"); wrap.setAttribute("aria-label", "Welcome");
+  document.body.append(wrap);
+  const done = async () => {
+    wrap.classList.add("bye"); setTimeout(() => wrap.remove(), motion ? 400 : 0);
+    if (!H().welcomed) { D.home.welcomed = true; try { await api("/api/home", { welcomed: true }); } catch {} }
+  };
+  const paint = (dir = 1) => {
+    const c = cards[i];
+    wrap.innerHTML = `<div class="wcard" style="--dir:${dir}"><div class="w-ic">${c.icon}</div><h2>${esc(c.h)}</h2>${c.p.map((x) => `<p>${esc(x)}</p>`).join("")}
+      ${c.sign ? `<p class="w-sign">Manav</p>` : ""}
+      <div class="w-dots">${cards.map((_, j) => `<i class="${j === i ? "on" : ""}"></i>`).join("")}</div>
+      <div class="w-acts">${i ? `<button class="btn ghost" data-b>Back</button>` : `<button class="linkish" data-s>Skip</button>`}<button class="btn green" data-n>${c.last ? "Let's go" : "Next"}</button></div></div>`;
+    $("[data-n]", wrap).onclick = () => (cards[i].last ? done() : (i++, paint(1)));
+    const b = $("[data-b]", wrap); if (b) b.onclick = () => { i--; paint(-1); };
+    const s = $("[data-s]", wrap); if (s) s.onclick = done;
+  };
+  let x0 = null;
+  wrap.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  wrap.addEventListener("touchend", (e) => {
+    if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (dx < -60 && i < cards.length - 1) { i++; paint(1); } else if (dx > 60 && i) { i--; paint(-1); }
+  });
+  paint();
+}
+
+/* ── an invite: they pick their own password, and they're in ── */
+async function invite(t) {
+  app.innerHTML = `<div class="wall"></div><div class="screen"><div class="login"><h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1><p>Opening your invite…</p></div></div>`;
+  let v;
+  try { const r = await fetch(API + "/api/invite?t=" + encodeURIComponent(t)); v = await r.json(); if (!r.ok) throw new Error(v.error); }
+  catch (e) { history.replaceState(null, "", location.pathname); return login(e.message || "This link didn't open. Ask Manav for a fresh one."); }
+  app.innerHTML = `<div class="wall"></div><div class="screen"><form class="login" id="inv">
+    <h1 class="lockup"><span>chemistry</span><span>labs<i>.</i></span></h1>
+    <p class="inv-h">Hello ${esc(v.name)} 👋</p>
+    <p>This is your team screen. ${v.existing ? "Pick a new password" : "Pick a password"} and you're in. Only you will know it.</p>
+    <label class="f"><span>Your username</span><input value="${esc(v.username)}" name="u" autocomplete="username" readonly></label>
+    <label class="f"><span>Your password, 8 characters or more</span><input name="pw" type="password" autocomplete="new-password" minlength="8" required></label>
+    <label class="showpw"><input type="checkbox" data-show> Show it</label>
+    <p class="err"></p><button class="btn green" type="submit">Set my password</button></form></div>`;
+  const f = $("#inv");
+  $("[data-show]", f).onchange = (e) => { f.pw.type = e.target.checked ? "text" : "password"; };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const r = await fetch(API + "/api/invite", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t, pw: f.pw.value }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error);
+      store.set(j.key); history.replaceState(null, "", location.pathname); firstPaint = true; load();
+    } catch (err) { $(".err", f).textContent = err.message; }
+  };
+}
+
+function boot() {
+  const m = location.hash.match(/invite=([A-Za-z0-9_-]+)/);
+  if (m) return invite(m[1]);
+  load();
+}
+
+boot();
