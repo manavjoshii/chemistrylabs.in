@@ -718,24 +718,45 @@ function allEvents() {
     .sort((a, b) => a.day.localeCompare(b.day) || String(a.time || "").localeCompare(String(b.time || "")));
 }
 
-/* One list: their own tasks and their project steps, since a step is a task too. */
+/* Their own next steps: what they wrote, and what Manav handed them. */
 function allTasks(list) {
-  const own = (list || H().tasks).map((t) => ({ ...t, kind: "task" }));
-  const steps = list ? [] : (D.steps || []).map((s) => ({ id: s.id, title: s.title, due: s.due || "", done: false, kind: "step", project: s.project }));
-  return own.concat(steps).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || a.id - b.id);
+  return (list || H().tasks).map((t) => ({ ...t, kind: "task" })).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || a.id - b.id);
 }
+
+/* SUGGESTED NEXT STEPS (16 Nov): "some tasks you are adding automatically so you can say
+   suggested next steps." Anything the hub puts forward on its own is a suggestion: a step
+   from a project, what a founder's stage says to do next, and what the person's number
+   says to do next. Nothing joins their list until they add it, and anything waved away
+   stays away. The tool helps; it never piles work on. */
+const keyOf = (t) => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) | 0; return "s" + (h >>> 0).toString(36); };
+function suggestions() {
+  const muted = new Set(H().muted || []), out = [];
+  for (const s of D.steps || []) out.push({ kind: "step", id: s.id, title: s.title, due: s.due || "", from: `Step in ${s.project}`, key: "step:" + s.id });
+  const f = H().founders;
+  if (f) {
+    const act = { call: (n) => `Book a call with ${n}`, talked: (n) => `Get a yes or a no from ${n}`, confirmed: (n) => `Make ${n}'s agreement`, sent: (n) => `Get ${n}'s agreement signed` };
+    for (const x of f.list) if (act[x.stage]) { const t = act[x.stage](x.name); out.push({ kind: "sug", title: t, due: D.today, from: "From your founders", key: keyOf(t) }); }
+  }
+  for (const x of (D.mine?.steps || []).slice(0, 4)) {
+    const t = String(x.text || "").trim(); if (!t) continue;
+    out.push({ kind: "sug", title: t, due: D.today, from: "From your number", key: keyOf(t) });
+  }
+  return out.filter((x) => !muted.has(x.key) && !H().tasks.some((t) => !t.done && t.title === x.title));
+}
+async function mute(key) { (D.home.muted ||= []).push(key); try { await api("/api/home", { mute: key }); } catch (e) { alert(e.message); } }
 const goalOf = (t) => (t.goal ? H().goals.find((g) => g.id === t.goal) : null);
 const metaOf = (t) => [t.project && `Step in ${t.project}`, goalOf(t) && `Goal: ${goalOf(t).title}`, t.from && `From ${t.from}`].filter(Boolean).join(" · ");
 
 function tasksTile() {
-  const open = allTasks().filter((t) => !t.done);
+  const open = allTasks().filter((t) => !t.done), sug = suggestions();
   const late = open.filter((t) => t.due && t.due < D.today).length, today = open.filter((t) => t.due === D.today).length;
-  const top = open.filter((t) => t.due).slice(0, 4);
+  const top = open.slice(0, 4), fill = sug.slice(0, Math.max(0, 4 - top.length));
   return `<div class="tile w4 h2 tasks" data-open="tasks" role="button" tabindex="0">
-    <span class="t-label"><em>✅</em>Tasks<span class="tk-count">${late ? `<b class="bad">${late} late</b> · ` : ""}${today} today</span></span>
+    <span class="t-label"><em>✅</em>Next steps<span class="tk-count">${late ? `<b class="bad">${late} late</b> · ` : ""}${today} today${sug.length ? ` · ${sug.length} suggested` : ""}</span></span>
     <ul class="tk-list">${top.map((t) => `<li class="${t.due < D.today ? "late" : ""}"><button class="tick mini" data-tick="${t.kind}:${t.id}" aria-label="Mark done: ${esc(t.title)}">${TICK}</button>
-      <span class="tk-t">${esc(t.title)}<small>${esc(when(t.due))}${t.project ? " · " + esc(t.project) : ""}</small></span></li>`).join("")
-      || `<li class="tk-empty">Nothing due. Tap to add a task, or write down a big goal and break it into steps.</li>`}</ul>
+      <span class="tk-t">${esc(t.title)}<small>${esc(when(t.due))}${t.from ? " · From " + esc(t.from) : ""}</small></span></li>`).join("")}
+      ${fill.map((x) => `<li class="sug"><span class="sug-dot" aria-hidden="true"></span><span class="tk-t">${esc(x.title)}<small>Suggested · ${esc(x.from.replace(/^From /, "from "))}</small></span></li>`).join("")}
+      ${!top.length && !fill.length ? `<li class="tk-empty">Nothing due. Tap to add your next step, or write down a big goal and get suggested steps for it.</li>` : ""}</ul>
     ${open.length > top.length ? `<span class="t-sub">${open.length - top.length} more</span>` : ""}</div>`;
 }
 
@@ -788,7 +809,7 @@ function homeTiles(d) {
 }
 const TILE_NAMES = { people: "People in rooms", revenue: "Revenue", mine: "Your number", alarm: "What needs you", website: "Website this week", social: "Social calendar",
   team: "Team", projects: "Projects", room: "Next room", steps: "Your steps", attend: "Catalyst attendance", contacts: "Catalyst contacts sheet",
-  agreements: "Contract generator", crm: "CRM", jobs: "Job list", add: "New project", tasks: "Tasks", events: "What's on", founders: "Catalyst founders" };
+  agreements: "Contract generator", crm: "CRM", jobs: "Job list", add: "New project", tasks: "Next steps", events: "What's on", founders: "Catalyst founders" };
 
 async function saveLayout(order, hidden) {
   D.home.layout = { order, hidden };
@@ -923,11 +944,10 @@ function bucketed(list) {
     ["Today", open.filter((t) => t.due === D.today)],
     ["This week", open.filter((t) => t.due > D.today && t.due <= wk)],
     ["Later", open.filter((t) => t.due > wk)],
-    ["Needs a date. Ask Manav for one", open.filter((t) => !t.due)],
     ["Done", list.filter((t) => t.done)],
   ].filter(([, g]) => g.length);
   return groups.map(([h, g]) => `<p class="block-h${h === "Late" ? " bad" : ""}">${h}</p><ul class="rows tk-rows">${g.map(taskRow).join("")}</ul>`).join("")
-    || `<p class="t-sub" style="padding:10px 0">Nothing on the list. Add the first thing you'll do, with its day.</p>`;
+    || `<p class="t-sub" style="padding:10px 0">Nothing on your list yet. Add the first thing you'll do, with its day.</p>`;
 }
 
 Object.assign(PAGES, {
@@ -936,22 +956,27 @@ Object.assign(PAGES, {
     const list = taskFor && otherTasks ? allTasks(otherTasks) : allTasks();
     const whose = taskFor ? people.find((p) => p.handle === taskFor)?.name || taskFor : "";
     const g = goalDraft;
-    return `<div class="icon">✅</div><h2>${whose ? `${esc(whose.split(" ")[0])}'s tasks` : "Tasks"}</h2>
+    const sug = taskFor ? [] : suggestions();
+    return `<div class="icon">✅</div><h2>${whose ? `${esc(whose.split(" ")[0])}'s next steps` : "Next steps"}</h2>
       ${owner && people.length ? `<div class="chips" data-for>${[["", "Mine"], ...people.map((p) => [p.handle, p.name.split(" ")[0]])].map(([h, n]) => `<button type="button" class="${taskFor === h ? "on" : ""}" data-h="${h}">${esc(n)}</button>`).join("")}</div>` : ""}
-      <form class="tk-add" data-addtask><input name="t" placeholder="${whose ? `Add a task for ${esc(whose.split(" ")[0])}` : "Add a task"}" autocomplete="off" maxlength="160" required>
+      <form class="tk-add" data-addtask><input name="t" placeholder="${whose ? `Add a next step for ${esc(whose.split(" ")[0])}` : "Add your next step"}" autocomplete="off" maxlength="160" required>
         <input name="d" type="date" value="${esc(D.today)}" min="${esc(D.today)}" required aria-label="Due date"><button class="btn green small">Add</button></form>
       <p class="err" data-taskerr></p>
       <div class="goalbox${goalOpen ? " open" : ""}">
-        <button type="button" class="goal-h" data-goaltoggle><span>🎯</span><b>Break down a big goal</b><small>${goalOpen ? "Close" : "It turns into small dated tasks"}</small></button>
+        <button type="button" class="goal-h" data-goaltoggle><span>🎯</span><b>Break down a big goal</b><small>${goalOpen ? "Close" : "Get suggested next steps, each with a date"}</small></button>
         ${goalOpen ? `<form data-goalform><label class="f"><span>The goal</span><input name="g" value="${esc(g?.title || "")}" placeholder="Run three practicals in December" maxlength="200" required></label>
           <label class="f"><span>Deadline</span><input name="gd" type="date" value="${esc(g?.due || addD(D.today, 21))}" min="${esc(addD(D.today, 1))}" required></label>
           <button class="btn small" ${g?.loading ? "disabled" : ""}>${g?.loading ? "Breaking it down…" : g?.tasks ? "Break it down again" : "Break it down"}</button></form>
           <p class="err">${esc(g?.err || "")}</p>
-          ${g?.tasks ? `<p class="block-h">Keep, change or drop any of these</p><div data-draft>${g.tasks.map((t, i) => `<div class="draft" data-i="${i}">
-            <input value="${esc(t.title)}" data-dt maxlength="160" aria-label="Task ${i + 1}"><input type="date" value="${esc(t.due)}" data-dd min="${esc(D.today)}" max="${esc(g.due)}" aria-label="Date for task ${i + 1}">
+          ${g?.tasks ? `<p class="block-h">Suggested next steps. Keep, change or drop any of them</p><div data-draft>${g.tasks.map((t, i) => `<div class="draft" data-i="${i}">
+            <input value="${esc(t.title)}" data-dt maxlength="160" aria-label="Step ${i + 1}"><input type="date" value="${esc(t.due)}" data-dd min="${esc(D.today)}" max="${esc(g.due)}" aria-label="Date for task ${i + 1}">
             <button type="button" class="x" data-drop aria-label="Drop this one">×</button></div>`).join("")}</div>
-            <div class="acts"><button class="btn green" data-keep>Add ${g.tasks.length} ${g.tasks.length === 1 ? "task" : "tasks"}</button></div>` : ""}` : ""}
+            <div class="acts"><button class="btn green" data-keep>Add ${g.tasks.length} ${g.tasks.length === 1 ? "step" : "steps"}</button></div>` : ""}` : ""}
       </div>
+      ${sug.length ? `<p class="block-h">Suggested next steps</p><ul class="rows sug-rows">${sug.map((x) => `<li data-sug="${esc(x.key)}">
+        <span class="txt">${esc(x.title)}<span class="meta">${esc(x.from)}</span></span>
+        ${x.kind === "step" ? `<span class="when${x.due && x.due < D.today ? " bad" : ""}">${esc(when(x.due))}</span><button class="tick" data-stepdone="${x.id}" aria-label="Mark done: ${esc(x.title)}">${TICK}</button>`
+          : `<label class="when">${esc(when(x.due))}<input type="date" value="${esc(x.due)}" min="${esc(D.today)}" data-sdue aria-label="Pick its day"></label><button class="btn small" data-take>Add</button><button class="x" data-mute aria-label="Not now">×</button>`}</li>`).join("")}</ul>` : ""}
       ${bucketed(list)}
       ${!taskFor && H().goals.length ? `<p class="block-h">Goals</p><ul class="rows">${H().goals.map((x) => `<li><span class="txt">${esc(x.title)}<span class="meta">By ${esc(day(x.due))} · ${x.done} of ${x.total} done${x.by && x.by !== D.me.handle ? " · from Manav" : ""}</span></span>
         <span class="ring-s" style="--p:${x.total ? x.done / x.total : 0}"></span><button class="x" data-goaldel="${x.id}" aria-label="Delete the goal ${esc(x.title)}">×</button></li>`).join("")}</ul>` : ""}`;
@@ -1073,8 +1098,18 @@ function wireHomePage(page, close, paint, name) {
         inp.onblur = save; inp.onkeydown = (e) => { if (e.key === "Enter") inp.blur(); if (e.key === "Escape") { inp.onblur = null; paint(); } };
       };
     });
+    page.querySelectorAll("[data-sug]").forEach((li) => {
+      const x = suggestions().find((y) => y.key === li.dataset.sug); if (!x) return;
+      const take = $("[data-take]", li), m = $("[data-mute]", li), sd = $("[data-sdue]", li), done = $("[data-stepdone]", li);
+      if (sd) sd.onchange = () => { x.due = sd.value; sd.parentNode.firstChild.textContent = when(sd.value); };
+      if (take) take.onclick = async () => {
+        try { await api("/api/task/add", { title: x.title, due: sd?.value || D.today }); await mute(x.key); await redo(); } catch (err) { alert(err.message); }
+      };
+      if (m) m.onclick = async () => { li.classList.add("going"); await mute(x.key); setTimeout(() => { draw(); paint(); }, 250); };
+      if (done) done.onclick = async () => { done.classList.add("on"); try { await api("/api/step", { id: Number(done.dataset.stepdone), done: true }); setTimeout(redo, 300); } catch (err) { alert(err.message); } };
+    });
     page.querySelectorAll("[data-goaldel]").forEach((b) => b.onclick = async () => {
-      if (!confirm("Delete this goal and its open tasks? Tasks already done stay done.")) return;
+      if (!confirm("Delete this goal and its open steps? Steps already done stay done.")) return;
       try { await api("/api/goal/remove", { id: Number(b.dataset.goaldel) }); await redo(); } catch (err) { alert(err.message); }
     });
   }
@@ -1144,31 +1179,35 @@ const hand = (t) => `<span class="hw">${t}</span>`;
 
 function tourSteps() {
   const d = D, name = d.me.name.split(" ")[0], has = (id) => app.querySelector(`[data-tile="${id}"]`);
-  const crmLine = { Practicals: "Add a practical's date here and it lands on everyone's calendar.", "Venture Catalyst": "It shows Catalyst applications only. Just what you need.",
+  const crmLine = { Practicals: "Add a practical's date here and it lands on everyone's calendar.", "Venture Catalyst": "It shows Catalyst applications only, so you see just what you work on.",
     "CRM and WhatsApp": "Rate every entry and send the invites, already signed in.", "Social media and creative ops": "Everyone who has applied, and every invite, already signed in." }[d.me.title] || "Already signed in. Tap and you're there.";
-  const s = [{ h: `Hey ${name}! 👋`, p: ["This is your Chemistry Labs dashboard.", "Everything you work on sits here, on your phone. No more hunting for a link, a date or a to-do.", "Let me show you your superpowers."], sign: true }];
+  /* One handwritten aside per step, never more: Schoolbell is a sprinkle (16 Nov). */
+  const s = [{ h: `Hey ${name} 👋`, p: ["This is your Chemistry Labs dashboard. I built it to help you do your work better and faster.",
+    "Everything you work on sits here, on your phone: what to do next, what's coming up, and every link you need. No more hunting through chats.",
+    "Here's what it can do for you."], aside: "— Manav" }];
   if (has("tasks")) {
     const [g, steps] = goalDemo();
-    s.push({ sel: "tasks", h: "Your to-do list", p: ["Everything here has a date.", "Tick it done right from here."] });
-    s.push({ sel: "tasks", h: "Got a big goal?", p: ["Write it down with a deadline. The hub breaks it into small dated steps for you."],
+    s.push({ sel: "tasks", h: "Your next steps", p: ["Everything here has a day. Tick it off right from the home screen."], aside: "tap the circle when it's done" });
+    s.push({ sel: "tasks", h: "Suggested next steps", p: ["The hub reads your work and suggests what to do next: from your projects, your numbers" + (has("founders") ? " and your founders" : "") + ".", "Add one with a tap. Wave away what doesn't fit."], aside: "it's here to help, not to watch" });
+    s.push({ sel: "tasks", h: "Got something big?", p: ["Write the goal and its deadline. You get suggested steps, each with a date, and you keep only the ones you want."],
       demo: `<div class="gdemo"><b>${esc(g)}</b>${steps.map((x, i) => `<i style="--i:${i}">${esc(x)}<small>${["in 2 days", "next week", "by the deadline"][i]}</small></i>`).join("")}</div>`,
-      more: d.me.owner ? "You can add tasks to anyone's list too." : "I can add tasks for you too. They say \"From Manav\"." });
+      more: d.me.owner ? "You can add next steps to anyone's list too." : "I can add a next step for you too. Those say \"From Manav\".", aside: "try it with something big" });
   }
-  if (has("events")) s.push({ sel: "events", h: "Everything we're doing", p: ["Build Clubs in every city, practicals, Catalyst sessions and Reactions.", "Tap for the whole month. Add a Reactions plan and the whole team sees it."] });
-  if (has("founders")) s.push({ sel: "founders", h: "Your founders, by stage", p: ["To call, booked, talked, confirmed, contract sent, signed.", "Change a Status in your sheet and they move here on their own."] });
-  if (has("agreements")) s.push({ sel: "agreements", h: "Agreements in a minute", p: ["Fill in a founder's details and get their PDF."] });
+  if (has("events")) s.push({ sel: "events", h: "Everything we're doing", p: ["Build Clubs in every city, practicals, Catalyst sessions and Reactions, on one calendar.", "Tap for the whole month. Add a Reactions plan and the whole team sees it."], aside: "always the latest dates" });
+  if (has("founders")) s.push({ sel: "founders", h: "Your founders, by stage", p: ["To call, booked, talked, confirmed, contract sent, signed.", "Change a founder's Status in your sheet and they move here on their own."], aside: "no double entry" });
+  if (has("agreements")) s.push({ sel: "agreements", h: "Agreements in a minute", p: ["Fill in a founder's details and get their agreement as a PDF."] });
   if (has("attend")) s.push({ sel: "attend", h: "Who came", p: ["Tick the founders after every session. Each one counts toward people in rooms."] });
   if (has("contacts")) s.push({ sel: "contacts", h: "Your contacts sheet", p: ["One tap away."] });
-  if (has("mine") && d.mine?.label) s.push({ sel: "mine", h: "Your number", p: [`${d.mine.label}.`, "This is what your work moves. Tap it to see how it's counted."] });
-  if (has("people")) s.push({ sel: "people", h: "Our number", p: ["People in rooms this month. Everyone at Chemistry Labs chases this one."] });
+  if (has("mine") && d.mine?.label) s.push({ sel: "mine", h: "Your number", p: [`${d.mine.label}. This is what your work moves.`, "Tap it to see how it's counted and what would move it next."], aside: "this one's yours" });
+  if (has("people")) s.push({ sel: "people", h: "Our number", p: ["People in rooms this month. Everyone at Chemistry Labs moves this one together."] });
   if (has("crm")) s.push({ sel: "crm", h: "Your CRM", p: [crmLine] });
-  if (has("social")) s.push({ sel: "social", h: "The social calendar", p: ["Every post for the next two weeks, and the stage it's at."] });
-  if (has("jobs")) s.push({ sel: "jobs", h: "Jobs the hub checks for you", p: ["When one is done, it shows here. You never have to report it."] });
+  if (has("social")) s.push({ sel: "social", h: "The social calendar", p: ["Every post for the next two weeks, and the stage each one is at."] });
+  if (has("jobs")) s.push({ sel: "jobs", h: "Jobs the hub checks for you", p: ["When one is done, it shows here on its own. You never have to report it."], aside: "less reporting, more doing" });
   if (has("team")) s.push({ sel: "team", h: "Your team", p: ["Everyone's number at a glance. Tap a person to see their screen."] });
   const link = app.querySelector('[data-tile^="link:"]');
-  if (link) s.push({ sel: link.dataset.tile, h: "Your links, like apps", p: ["Tap to open. Add the ones you use every day."] });
-  s.push({ sel: "grid", h: "Make it yours", p: ["Press and hold any tile.", "Drag it to move it. Tap − to hide it, + to add a link."], jiggle: true });
-  s.push({ h: `That's it, ${name}!`, p: ["Open this whenever you wonder what's next. It will tell you.", "You can watch this again from \"How this works\"."], last: true });
+  if (link) s.push({ sel: link.dataset.tile, h: "Your links", p: ["They sit here like apps. Add the ones you open every day."] });
+  s.push({ sel: "grid", h: "Make it yours", p: ["Press and hold any tile. Drag it to move it, tap − to hide it, and + to add a link."], jiggle: true, aside: "just like your phone" });
+  s.push({ h: `That's it, ${name}`, p: ["Open this whenever you wonder what's next. It will tell you.", "You can watch this again from \"How this works\" under your name."], last: true, aside: "go get it" });
   return s;
 }
 
@@ -1188,8 +1227,8 @@ function welcome() {
     window.scrollTo(0, 0);
     if (!H().welcomed) { D.home.welcomed = true; try { await api("/api/home", { welcomed: true }); } catch {} }
   };
-  const noteHtml = (st) => `${hand(`<b>${esc(st.h)}</b>`)}${st.p.map((x) => `<p>${hand(esc(x))}</p>`).join("")}${st.demo || ""}${st.more ? `<p>${hand(esc(st.more))}</p>` : ""}
-      ${st.sign ? `<p class="tsign">${hand("— Manav")}</p>` : ""}
+  const noteHtml = (st) => `<h3 class="th">${esc(st.h)}</h3>${st.p.map((x) => `<p>${esc(x)}</p>`).join("")}${st.demo || ""}${st.more ? `<p>${esc(st.more)}</p>` : ""}
+      ${st.aside ? `<p class="aside hw">${esc(st.aside)}</p>` : ""}
       <div class="tnav"><span class="tdots">${steps.map((_, j) => `<i class="${j === i ? "on" : ""}"></i>`).join("")}</span>
       ${i ? `<button class="tbtn ghost" data-b>Back</button>` : `<button class="tbtn ghost" data-s>Skip</button>`}<button class="tbtn" data-n>${st.last ? "Let's go" : i ? "Next" : "Show me"}</button></div>`;
   const show = () => {

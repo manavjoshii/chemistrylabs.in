@@ -444,11 +444,10 @@ u[class^="k-"], u[class*=" k-"] { display: inline-block; width: 7px; height: 7px
 .motion .tnote.in { animation: notein .5s var(--ease); }
 @keyframes notein { from { opacity: 0; transform: translateY(10px) rotate(-1deg); } }
 .hw { font-family: var(--hand); }
-.tnote b .hw, .tnote > .hw b { font-weight: 400; }
-.tnote > .hw { display: block; font-size: 34px; line-height: 1.05; margin-bottom: 10px; rotate: -1.5deg; }
-.tnote.solo > .hw { font-size: 46px; }
-.tnote p { margin: 0 0 6px; font-size: 21px; line-height: 1.25; }
-.tsign { text-align: right; margin-top: 10px !important; }
+.th { font: 700 27px/1.1 var(--font); letter-spacing: -0.03em; margin: 0 0 10px; }
+.tnote.solo .th { font-size: 34px; }
+.tnote p { margin: 0 0 8px; font-size: 16.5px; line-height: 1.42; color: rgba(253, 248, 240, 0.9); }
+.tnote .aside { font-size: 21px; line-height: 1.1; color: var(--green-hi); rotate: -2deg; margin: 10px 0 0; text-align: right; }
 .gdemo { margin: 10px 0 8px; padding: 12px 14px; border-radius: 18px; background: rgba(253, 248, 240, 0.08); box-shadow: inset 0 0 0 1px var(--line); text-shadow: none; }
 .gdemo b { display: block; font: 600 15px/1.3 var(--font); margin-bottom: 6px; }
 .gdemo i { display: flex; justify-content: space-between; gap: 10px; font: 400 14px/1.3 var(--font); padding: 6px 0; border-top: 1px solid var(--line-soft); }
@@ -459,7 +458,14 @@ u[class^="k-"], u[class*=" k-"] { display: inline-block; width: 7px; height: 7px
 .tdots { display: flex; gap: 5px; flex: 1; flex-wrap: wrap; }
 .tdots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(253, 248, 240, 0.3); transition: width .3s var(--ease); }
 .tdots i.on { width: 16px; background: var(--paper); }
-.tbtn { border: 0; border-radius: 999px; padding: 10px 20px; font: 400 20px/1 var(--hand); background: var(--green-hi); color: #0e1a0b; }
+.tbtn { border: 0; border-radius: 999px; padding: 11px 20px; font: 600 15px/1 var(--font); background: var(--green-hi); color: #0e1a0b; }
 .tbtn.ghost { background: none; color: var(--paper); padding: 10px 8px; }
 @media (prefers-reduced-motion: reduce) { .tring { animation: none; } }
 .tnote.over { background: rgba(14, 20, 12, 0.9); padding: 16px 18px; border-radius: 24px; box-shadow: inset 0 0 0 1px var(--line); }
+
+/* suggested next steps: a quiet dot instead of a tick, until they add it */
+.tk-list li.sug .tk-t { color: rgba(253, 248, 240, 0.78); }
+.sug-dot { width: 24px; height: 24px; flex: none; border-radius: 50%; border: 1.5px dashed rgba(253, 248, 240, 0.4); }
+.sug-rows li { flex-wrap: wrap; }
+.sug-rows .txt { flex-basis: 100%; }
+.sug-rows li > .when { margin-left: auto; }
