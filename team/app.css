@@ -424,3 +424,42 @@ u[class^="k-"], u[class*=" k-"] { display: inline-block; width: 7px; height: 7px
 .showpw { display: flex; gap: 8px; align-items: center; font-size: 13.5px; color: var(--steel); margin: -4px 0 6px; }
 .showpw input { width: auto; }
 @media (prefers-reduced-motion: reduce) { .editing .tile { animation: none; } }
+
+/* ── the tour (16 Nov): handwritten notes over the real screen, the rest blurred ── */
+:root { --hand: "Schoolbell", "Bradley Hand", cursive; }
+.touring, .touring body { overflow: hidden; }
+.tour { position: fixed; inset: 0; z-index: 60; }
+.tour.bye { opacity: 0; transition: opacity .35s var(--ease); }
+.tb { position: fixed; background: rgba(6, 9, 5, 0.62); -webkit-backdrop-filter: blur(9px) saturate(.8); backdrop-filter: blur(9px) saturate(.8);
+  transition: all .45s var(--ease); }
+.tring { position: fixed; border-radius: 32px; box-shadow: 0 0 0 2px var(--green-hi), 0 0 36px 6px rgba(92, 184, 74, 0.45); pointer-events: none; transition: all .45s var(--ease); }
+.motion .tring { animation: breathe 2.2s ease-in-out infinite; }
+@keyframes breathe { 50% { box-shadow: 0 0 0 2px var(--green-hi), 0 0 52px 12px rgba(92, 184, 74, 0.55); } }
+.tarrow { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; overflow: visible; }
+.tarrow path { fill: none; stroke: var(--paper); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 600; stroke-dashoffset: 0; }
+.motion .tarrow.draw path { animation: drawline .7s var(--ease) .15s both; }
+@keyframes drawline { from { stroke-dashoffset: 600; } }
+.tnote { position: fixed; left: 50%; translate: -50% 0; width: min(100vw - 40px, 400px); color: var(--paper); text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55); }
+.tnote.solo { top: 50% !important; translate: -50% -50%; }
+.motion .tnote.in { animation: notein .5s var(--ease); }
+@keyframes notein { from { opacity: 0; transform: translateY(10px) rotate(-1deg); } }
+.hw { font-family: var(--hand); }
+.tnote b .hw, .tnote > .hw b { font-weight: 400; }
+.tnote > .hw { display: block; font-size: 34px; line-height: 1.05; margin-bottom: 10px; rotate: -1.5deg; }
+.tnote.solo > .hw { font-size: 46px; }
+.tnote p { margin: 0 0 6px; font-size: 21px; line-height: 1.25; }
+.tsign { text-align: right; margin-top: 10px !important; }
+.gdemo { margin: 10px 0 8px; padding: 12px 14px; border-radius: 18px; background: rgba(253, 248, 240, 0.08); box-shadow: inset 0 0 0 1px var(--line); text-shadow: none; }
+.gdemo b { display: block; font: 600 15px/1.3 var(--font); margin-bottom: 6px; }
+.gdemo i { display: flex; justify-content: space-between; gap: 10px; font: 400 14px/1.3 var(--font); padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.gdemo i small { color: var(--green-hi); white-space: nowrap; font-weight: 600; }
+.motion .gdemo i { animation: stepin .5s var(--ease) both; animation-delay: calc(.5s + var(--i) * .45s); }
+@keyframes stepin { from { opacity: 0; transform: translateX(-12px); } }
+.tnav { display: flex; align-items: center; gap: 10px; margin-top: 16px; text-shadow: none; }
+.tdots { display: flex; gap: 5px; flex: 1; flex-wrap: wrap; }
+.tdots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(253, 248, 240, 0.3); transition: width .3s var(--ease); }
+.tdots i.on { width: 16px; background: var(--paper); }
+.tbtn { border: 0; border-radius: 999px; padding: 10px 20px; font: 400 20px/1 var(--hand); background: var(--green-hi); color: #0e1a0b; }
+.tbtn.ghost { background: none; color: var(--paper); padding: 10px 8px; }
+@media (prefers-reduced-motion: reduce) { .tring { animation: none; } }
+.tnote.over { background: rgba(14, 20, 12, 0.9); padding: 16px 18px; border-radius: 24px; box-shadow: inset 0 0 0 1px var(--line); }

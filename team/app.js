@@ -1128,56 +1128,136 @@ function wireHomePage(page, close, paint, name) {
   }
 }
 
-/* ── the welcome: the first time they sign in, and any time from "How this works" ── */
-function welcomeCards() {
-  const d = D, name = d.me.name.split(" ")[0], f = H().founders, crm = d.crm || d.crmAsk;
-  const cards = [
-    { icon: "👋", h: `Hello ${name}`, p: [`I built this for you. Everything you work on at Chemistry Labs now sits on one screen, on your phone.`,
-      `Give it two minutes now and it will save you a lot of looking for things later.`], sign: true },
-    { icon: "✅", h: "Your tasks", p: [`Everything here has a date. Add a task, pick its day, and tick it when it's done. You can tick straight from the home screen.`,
-      `Got something big? Write it as a goal with a deadline, and the hub breaks it into small dated tasks you can start today. You can change any of them before they're saved.`,
-      `I can add to your list too. Those say "From Manav".${d.steps?.length ? " Your project steps show up here as well." : ""}`] },
-    { icon: "🗓️", h: "What's on", p: [`Everything we're doing, on one calendar: Build Clubs, practicals, Venture Catalyst sessions and Reactions.`,
-      `Build Clubs come straight from the website's calendar, and practicals from the CRM. Reactions happen on our WhatsApp community, so add them here yourself and the whole team sees them.`] },
-  ];
-  if (f) cards.push({ icon: "🚀", h: "Your founders", p: [`Every Catalyst founder, by stage: to call, call booked, talked, confirmed, contract sent, signed or declined.`,
-    `It reads your contacts sheet, so when you change a founder's Status there, they move here on their own. The contract generator and the sheet are one tap away.`,
-    d.crm ? `Your CRM opens from here too, set up for Catalyst only.` : ""] });
-  else if (crm) cards.push({ icon: "📇", h: "Your CRM", p: [`The CRM opens from here, already signed in. Your number and your jobs sit right beside it, so you always know what moves things.`,
-    d.me.title === "Practicals" ? `Your CRM shows practicals. Add a date there and it lands on everyone's calendar here.` : ""] });
-  cards.push({ icon: "📱", h: "Make it yours", p: [`It works like your phone's home screen. Press and hold any tile, then drag it where you want it.`,
-    `Tap the minus to hide something, and the plus to bring it back or add a link you open every day. Your links sit on the home screen like apps.`,
-    `Your layout is yours alone. Nobody else's screen changes.`], last: true });
-  return cards.map((c) => ({ ...c, p: c.p.filter(Boolean) }));
+/* ── the tour: the first time they sign in, and any time from "How this works" ──
+   16 Nov, his brief: handwritten (Schoolbell), demonstrative, on the screen itself with
+   the rest blurred, never in blocks. Someone who has no idea what link they were sent
+   should finish it knowing why this exists, and what their own superpowers are here.
+   So it points at their real tiles, one at a time, and shows the moves. */
+const GOAL_DEMO = {
+  umang: ["Get every confirmed founder signed", ["Call the founders still to talk", "Send each agreement as a PDF", "Collect every signature"]],
+  arpita: ["Run three practicals in December", ["Message experts about December dates", "Fix date and price on a call", "Put all three on the website"]],
+  isha: ["Fill every Sunday by Friday", ["Rate every new entry before 7pm", "Send 50 invites by Wednesday", "Chase the yes-but-unpaid on Thursday"]],
+  asiya: ["A story from every Build Club this month", ["Ask for photos on Sunday", "Post the story by 9pm", "Reply to every comment within 4 hours"]],
+};
+const goalDemo = () => GOAL_DEMO[D.me.handle] || ["Launch the next Catalyst cohort", ["Fix the dates with the founders", "Open applications on the website", "Pick the founders"]];
+const hand = (t) => `<span class="hw">${t}</span>`;
+
+function tourSteps() {
+  const d = D, name = d.me.name.split(" ")[0], has = (id) => app.querySelector(`[data-tile="${id}"]`);
+  const crmLine = { Practicals: "Add a practical's date here and it lands on everyone's calendar.", "Venture Catalyst": "It shows Catalyst applications only. Just what you need.",
+    "CRM and WhatsApp": "Rate every entry and send the invites, already signed in.", "Social media and creative ops": "Everyone who has applied, and every invite, already signed in." }[d.me.title] || "Already signed in. Tap and you're there.";
+  const s = [{ h: `Hey ${name}! 👋`, p: ["This is your Chemistry Labs dashboard.", "Everything you work on sits here, on your phone. No more hunting for a link, a date or a to-do.", "Let me show you your superpowers."], sign: true }];
+  if (has("tasks")) {
+    const [g, steps] = goalDemo();
+    s.push({ sel: "tasks", h: "Your to-do list", p: ["Everything here has a date.", "Tick it done right from here."] });
+    s.push({ sel: "tasks", h: "Got a big goal?", p: ["Write it down with a deadline. The hub breaks it into small dated steps for you."],
+      demo: `<div class="gdemo"><b>${esc(g)}</b>${steps.map((x, i) => `<i style="--i:${i}">${esc(x)}<small>${["in 2 days", "next week", "by the deadline"][i]}</small></i>`).join("")}</div>`,
+      more: d.me.owner ? "You can add tasks to anyone's list too." : "I can add tasks for you too. They say \"From Manav\"." });
+  }
+  if (has("events")) s.push({ sel: "events", h: "Everything we're doing", p: ["Build Clubs in every city, practicals, Catalyst sessions and Reactions.", "Tap for the whole month. Add a Reactions plan and the whole team sees it."] });
+  if (has("founders")) s.push({ sel: "founders", h: "Your founders, by stage", p: ["To call, booked, talked, confirmed, contract sent, signed.", "Change a Status in your sheet and they move here on their own."] });
+  if (has("agreements")) s.push({ sel: "agreements", h: "Agreements in a minute", p: ["Fill in a founder's details and get their PDF."] });
+  if (has("attend")) s.push({ sel: "attend", h: "Who came", p: ["Tick the founders after every session. Each one counts toward people in rooms."] });
+  if (has("contacts")) s.push({ sel: "contacts", h: "Your contacts sheet", p: ["One tap away."] });
+  if (has("mine") && d.mine?.label) s.push({ sel: "mine", h: "Your number", p: [`${d.mine.label}.`, "This is what your work moves. Tap it to see how it's counted."] });
+  if (has("people")) s.push({ sel: "people", h: "Our number", p: ["People in rooms this month. Everyone at Chemistry Labs chases this one."] });
+  if (has("crm")) s.push({ sel: "crm", h: "Your CRM", p: [crmLine] });
+  if (has("social")) s.push({ sel: "social", h: "The social calendar", p: ["Every post for the next two weeks, and the stage it's at."] });
+  if (has("jobs")) s.push({ sel: "jobs", h: "Jobs the hub checks for you", p: ["When one is done, it shows here. You never have to report it."] });
+  if (has("team")) s.push({ sel: "team", h: "Your team", p: ["Everyone's number at a glance. Tap a person to see their screen."] });
+  const link = app.querySelector('[data-tile^="link:"]');
+  if (link) s.push({ sel: link.dataset.tile, h: "Your links, like apps", p: ["Tap to open. Add the ones you use every day."] });
+  s.push({ sel: "grid", h: "Make it yours", p: ["Press and hold any tile.", "Drag it to move it. Tap − to hide it, + to add a link."], jiggle: true });
+  s.push({ h: `That's it, ${name}!`, p: ["Open this whenever you wonder what's next. It will tell you.", "You can watch this again from \"How this works\"."], last: true });
+  return s;
 }
+
 function welcome() {
-  const cards = welcomeCards();
+  const steps = tourSteps();
   let i = 0;
-  const wrap = document.createElement("div");
-  wrap.className = "welcome"; wrap.setAttribute("role", "dialog"); wrap.setAttribute("aria-label", "Welcome");
-  document.body.append(wrap);
+  const root = document.createElement("div");
+  root.className = "tour"; root.setAttribute("role", "dialog"); root.setAttribute("aria-label", "How your dashboard works");
+  root.innerHTML = `<div class="tb tb-t"></div><div class="tb tb-r"></div><div class="tb tb-b"></div><div class="tb tb-l"></div><div class="tring"></div><svg class="tarrow" aria-hidden="true"><path/></svg><div class="tnote"></div>`;
+  document.body.append(root);
+  document.documentElement.classList.add("touring");
+  const screen = $(".screen", app);
   const done = async () => {
-    wrap.classList.add("bye"); setTimeout(() => wrap.remove(), motion ? 400 : 0);
+    screen?.classList.remove("editing");
+    document.documentElement.classList.remove("touring");
+    root.classList.add("bye"); setTimeout(() => root.remove(), motion ? 350 : 0);
+    window.scrollTo(0, 0);
     if (!H().welcomed) { D.home.welcomed = true; try { await api("/api/home", { welcomed: true }); } catch {} }
   };
-  const paint = (dir = 1) => {
-    const c = cards[i];
-    wrap.innerHTML = `<div class="wcard" style="--dir:${dir}"><div class="w-ic">${c.icon}</div><h2>${esc(c.h)}</h2>${c.p.map((x) => `<p>${esc(x)}</p>`).join("")}
-      ${c.sign ? `<p class="w-sign">Manav</p>` : ""}
-      <div class="w-dots">${cards.map((_, j) => `<i class="${j === i ? "on" : ""}"></i>`).join("")}</div>
-      <div class="w-acts">${i ? `<button class="btn ghost" data-b>Back</button>` : `<button class="linkish" data-s>Skip</button>`}<button class="btn green" data-n>${c.last ? "Let's go" : "Next"}</button></div></div>`;
-    $("[data-n]", wrap).onclick = () => (cards[i].last ? done() : (i++, paint(1)));
-    const b = $("[data-b]", wrap); if (b) b.onclick = () => { i--; paint(-1); };
-    const s = $("[data-s]", wrap); if (s) s.onclick = done;
+  const noteHtml = (st) => `${hand(`<b>${esc(st.h)}</b>`)}${st.p.map((x) => `<p>${hand(esc(x))}</p>`).join("")}${st.demo || ""}${st.more ? `<p>${hand(esc(st.more))}</p>` : ""}
+      ${st.sign ? `<p class="tsign">${hand("— Manav")}</p>` : ""}
+      <div class="tnav"><span class="tdots">${steps.map((_, j) => `<i class="${j === i ? "on" : ""}"></i>`).join("")}</span>
+      ${i ? `<button class="tbtn ghost" data-b>Back</button>` : `<button class="tbtn ghost" data-s>Skip</button>`}<button class="tbtn" data-n>${st.last ? "Let's go" : i ? "Next" : "Show me"}</button></div>`;
+  const show = () => {
+    const st = steps[i], note = $(".tnote", root), ring = $(".tring", root), arrow = $(".tarrow", root);
+    screen?.classList.toggle("editing", !!st.jiggle);
+    const el = st.sel === "grid" ? $(".grid", app) : st.sel ? app.querySelector(`[data-tile="${st.sel}"]`) : null;
+    const W = innerWidth, Hh = innerHeight;
+    /* The note is written first so its height is known; then the page scrolls so the tile and
+       the note both fit on the screen, note under the tile where it can. */
+    note.innerHTML = noteHtml(st);
+    note.className = "tnote" + (el ? "" : " solo");
+    note.style.top = "-9999px"; note.style.bottom = "";
+    const nh = note.offsetHeight, gap = 46;
+    let r = null, place = "solo";
+    if (el) {
+      const b = el.getBoundingClientRect(), th = st.jiggle ? Math.min(b.height, Hh * 0.36) : b.height;
+      const want = Math.max(20, (Hh - (th + gap + nh)) / 2);
+      window.scrollTo(0, Math.max(0, scrollY + b.top - want));
+      const c = el.getBoundingClientRect(), pad = 8;
+      r = { top: Math.max(8, c.top - pad), left: Math.max(4, c.left - pad), right: Math.min(W - 4, c.right + pad), bottom: Math.min(Hh - 8, c.bottom + pad) };
+      if (st.jiggle) r.bottom = Math.min(r.bottom, r.top + th + pad);
+      place = Hh - r.bottom - gap >= nh + 12 ? "below" : r.top - gap >= nh + 12 ? "above" : "over";
+    }
+    /* Four blurred panes around the hole, so the tile itself stays sharp. */
+    const [t, rt, bt, l] = root.querySelectorAll(".tb");
+    if (r) {
+      Object.assign(t.style, { top: "0", left: "0", width: "100%", height: r.top + "px" });
+      Object.assign(bt.style, { top: r.bottom + "px", left: "0", width: "100%", height: Hh - r.bottom + "px" });
+      Object.assign(l.style, { top: r.top + "px", left: "0", width: r.left + "px", height: r.bottom - r.top + "px" });
+      Object.assign(rt.style, { top: r.top + "px", left: r.right + "px", width: W - r.right + "px", height: r.bottom - r.top + "px" });
+      Object.assign(ring.style, { display: "block", top: r.top + "px", left: r.left + "px", width: r.right - r.left + "px", height: r.bottom - r.top + "px" });
+    } else {
+      Object.assign(t.style, { top: "0", left: "0", width: "100%", height: "100%" });
+      for (const x of [rt, bt, l]) x.style.height = "0";
+      ring.style.display = "none";
+    }
+    note.style.top = "";
+    note.classList.add(place);
+    const below = place !== "above";
+    if (place === "below") note.style.top = r.bottom + gap + "px";
+    else if (place === "above") note.style.bottom = Hh - r.top + gap + "px";
+    else if (place === "over") note.style.bottom = "16px";
+    /* A hand-drawn arrow from the note to the tile. */
+    if (r && place !== "over") {
+      const x1 = W * 0.3, x2 = Math.min(r.right - 30, Math.max(r.left + 30, W * 0.55));
+      const y1 = below ? r.bottom + 44 : Hh - (Hh - r.top + 44), y2 = below ? r.bottom + 6 : r.top - 6;
+      arrow.setAttribute("viewBox", `0 0 ${W} ${Hh}`);
+      const mx = (x1 + x2) / 2 - 30, my = (y1 + y2) / 2;
+      const head = below ? `M${x2 - 7} ${y2 + 9} L${x2} ${y2} L${x2 + 8} ${y2 + 7}` : `M${x2 - 7} ${y2 - 9} L${x2} ${y2} L${x2 + 8} ${y2 - 7}`;
+      $("path", arrow).setAttribute("d", `M${x1} ${y1} Q${mx} ${my} ${x2} ${y2} ${head}`);
+      arrow.style.display = "block";
+      arrow.classList.remove("draw"); void arrow.getBoundingClientRect(); arrow.classList.add("draw");
+    } else arrow.style.display = "none";
+    note.classList.remove("in"); void note.offsetWidth; note.classList.add("in");
+    $("[data-n]", note).onclick = () => (st.last ? done() : (i++, show()));
+    const b = $("[data-b]", note); if (b) b.onclick = () => { i--; show(); };
+    const sk = $("[data-s]", note); if (sk) sk.onclick = done;
   };
   let x0 = null;
-  wrap.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
-  wrap.addEventListener("touchend", (e) => {
+  root.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  root.addEventListener("touchend", (e) => {
     if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
-    if (dx < -60 && i < cards.length - 1) { i++; paint(1); } else if (dx > 60 && i) { i--; paint(-1); }
+    if (dx < -60 && i < steps.length - 1) { i++; show(); } else if (dx > 60 && i) { i--; show(); }
   });
-  paint();
+  root.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+  show();
 }
+
 
 /* ── an invite: they pick their own password, and they're in ── */
 async function invite(t) {
