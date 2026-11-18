@@ -7,14 +7,16 @@
 # this script never touches it.
 set -e
 SRC=~/chemistry-labs-site
+# Every Reactions form listed in tools/data/reactions.json is published at its own path.
+RX=$(python3 -c "import json,os;print(' '.join(r['path'] for r in json.load(open(os.path.expanduser('~/chemistry-labs-site/tools/data/reactions.json')))))")
 cd "$(dirname "$0")"
 git pull -q --rebase --autostash origin main
 python3 "$SRC/tools/build.py" > /dev/null
 find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md ! -name team ! -name time ! -name "studio-*" -exec rm -rf {} +
-for d in index.html 404.html robots.txt sitemap.xml apply gamenight build-club practicals venture-catalyst calendar terms refunds privacy contact css fonts img; do cp -R "$SRC/$d" .; done
+for d in index.html 404.html robots.txt sitemap.xml apply $RX build-club practicals venture-catalyst calendar terms refunds privacy contact css fonts img; do cp -R "$SRC/$d" .; done
 mkdir -p js && cp "$SRC/js/v3.js" "$SRC/js/s.js" js/
 # The date tables stay on manavjoshi.com, one source of truth, so a date changed there shows here too.
-find index.html apply gamenight build-club practicals venture-catalyst calendar -name index.html -exec \
+find index.html apply build-club practicals venture-catalyst calendar -name index.html -exec \
   sed -i '' -E 's#src="/js/(smbc-cities|practicals|city-wheel)\.js#src="https://manavjoshi.com/js/\1.js#g' {} +
 touch .nojekyll
 git add -A
