@@ -175,7 +175,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
         <label class="check">
           <input type="checkbox" id="cFee">
           <span class="box"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 6 12 13.5 4"/></svg></span>
-          <span id="feeClub">I know the fee is &#8377;<b id="tickFee">1499</b>, paid after I'm invited</span><span id="feeOther" style="display:none">I know Venture Catalyst is paid in a fee or in equity, agreed when we talk</span>
+          <span id="feeClub">I know the fee is &#8377;<b id="tickFee">1999</b>, paid after I'm invited</span><span id="feeOther" style="display:none">I know Venture Catalyst is paid in a fee or in equity, agreed when we talk</span>
         </label>
       </div>
 
@@ -343,7 +343,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
     /* Date fluid swaps the whole sentence: there is no Sunday to name, and
        the city is the one they live in, if they gave one. */
     var fluid = iso === 'fluid', home = $('fCity') ? $('fCity').value.trim() : '';
-    $('tickFee').textContent = (!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(iso))) || 1499;
+    $('tickFee').textContent = (!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(iso))) || 1999;
     $('tickFixed').style.display = fluid ? 'none' : '';
     $('tickFluid').style.display = fluid ? '' : 'none';
     if (fluid) {
@@ -1168,7 +1168,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
          sunday it has already seen once, so this never doubles up, and it
          checks the number again there. */
       var row = { form: 'smbc', returning: 'yes', name: name, phone: phone, city: city, date: isoOf(chosenISO),
-                  fee_ok: 'yes', fee: String((window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(chosenISO))) || 1499) };
+                  fee_ok: 'yes', fee: String((window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(chosenISO))) || 1999) };
       try { navigator.sendBeacon(ENDPOINT, new URLSearchParams(row)); } catch (e) {}
       var d = new Date(isoOf(chosenISO) + 'T00:00:00Z');
       var waText = 'Hey, I have been to Sunday Morning Build Club before and I\u2019d like to come again - ' +
@@ -1360,7 +1360,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
       found: picked.found,
       ref_name: NAMED_REF[picked.found] ? $('fRef').value.trim() : '',
       city: cityFor(sendISO), date: isoOf(sendISO), date_fluid: fluid ? 'yes' : '',
-      fee_ok: 'yes', fee: String((!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(sendISO))) || 1499)
+      fee_ok: 'yes', fee: String((!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(sendISO))) || 1999)
     };
     /* His own words, carrying the two things the CRM needs to match this
        message to this application: which Sunday and which city. */
