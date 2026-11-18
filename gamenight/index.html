@@ -153,7 +153,7 @@
 <g fill="currentColor"><path d="M185 0H38V143H185Z" transform="translate(1793.00 -1050.00)" style="fill:var(--dot,currentColor)"/></g>
 </g>
 </svg></a>
-  <button class="rx-snd" id="snd" type="button" aria-pressed="true" aria-label="Turn the music on or off"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span id="sndLabel">Sound</span></button><audio id="score" loop preload="auto" aria-hidden="true"><source src="/gamenight/theme.mp3" type="audio/mpeg"></audio>
+  <button class="rx-snd" id="snd" type="button" aria-pressed="true" aria-label="Turn the music on or off"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span id="sndLabel">Sound</span></button><audio id="score" loop preload="auto" aria-hidden="true"><source src="/img/mafia/theme.mp3" type="audio/mpeg"></audio>
  </header>
  <main class="rx-main" id="main">
   <section class="rx-show" aria-labelledby="rxT">
@@ -209,13 +209,18 @@
     <button class="rx-link" type="button" data-reset id="again" hidden>Not you? Start again</button>
    </div>
 
+   <div class="rx-step" data-step="closed">
+    <h2 class="rx-h2">Entries are closed</h2>
+    <p class="rx-p">Every seat at this table is taken. Thank you for wanting one. See you at the next one.</p>
+   </div>
+
    <p class="rx-sign">May the shrewdest win.</p>
   </section>
  </main>
 </div>
 
 
-<script type="application/json" id="rxCfg">{"slug": "mafia", "edition": "01", "title": "Thursday Mafia Night", "seats": 10, "open_max": 6, "open_min": 2, "open_on": {"2026-11-18": 6}, "door": "https://reactions-door.manavjoshi01.workers.dev", "sheet": "https://script.google.com/macros/s/AKfycbyIdrCDzYTx7XQQ5l8ByaFW6FsGuSIJJvwTkN449Fhq20HrZjIYTnZpOWI4qs8-2uP5gw/exec"}</script>
+<script type="application/json" id="rxCfg">{"slug":"mafia","edition":"01","title":"Thursday Mafia Night","seats":10,"open_max":6,"open_min":2,"open_on":{"2026-11-18":6},"door":"https://reactions-door.manavjoshi01.workers.dev","sheet":"https://script.google.com/macros/s/AKfycbyIdrCDzYTx7XQQ5l8ByaFW6FsGuSIJJvwTkN449Fhq20HrZjIYTnZpOWI4qs8-2uP5gw/exec"}</script>
 <script>
 (function () {
   'use strict';
@@ -268,7 +273,7 @@
     return C.seats - Math.min(C.seats, open);
   }
   leftEl.textContent = C.seats;
-  deal(roll());
+  deal(C.closed ? C.seats : roll());
   var go0 = function () { setTimeout(start, calm ? 0 : 380); };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(go0); else go0();
   setTimeout(start, 1600);
@@ -294,6 +299,8 @@
 
   /* The door answers yes or no. Anything else (offline, a timeout) opens the page instead of closing it. */
   function ask(path, data) {
+    /* The team's preview in the hub: walk every step, send nothing anywhere. */
+    if (C.preview) return new Promise(function (r) { setTimeout(function () { r(path === '/check' ? { member: true, via: 'phone' } : { ok: true }); }, 450); });
     var ctl = window.AbortController ? new AbortController() : null;
     var t = setTimeout(function () { ctl && ctl.abort(); }, 7000);
     return fetch(DOOR + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(data), signal: ctl && ctl.signal })
@@ -382,12 +389,14 @@
     ask('/join', data).then(function (r) {
       if (r.ok) return finish();
       if (r.member === false) { sending = false; busy(bWhy, false); return step('lost'); }
+      if (r.closed) { sending = false; busy(bWhy, false); return step('closed'); }
       return direct(base, 'checked').then(finish);
     }).catch(function () { direct(base, 'checked').then(finish); });
   });
 
   /* The door could not file it: send it to the Sheet straight from the page, with what the page has. */
   function direct(base, member) {
+    if (C.preview) return Promise.resolve();
     try {
       fetch(SHEET, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ step: 'claim', slug: base.slug, edition: base.edition, name: who.name || iName.value.trim(),
@@ -400,7 +409,7 @@
   function done(fresh, name) {
     var f = name || first();
     $('dHead').textContent = f ? 'Got it, ' + f + '.' : 'Got it.';
-    if (fresh) { try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), first: f })); } catch (e) {} }
+    if (fresh && !C.preview) { try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), first: f })); } catch (e) {} }
     $('again').hidden = !!fresh;
     step('done');
     var mine = taken;
@@ -411,9 +420,12 @@
     setTimeout(lift, calm ? 0 : 520);
   }
 
+  /* Closed by the team in the hub: the table is full, no form. */
+  if (C.closed) { $('fWho').classList.remove('on'); door.querySelector('[data-step="closed"]').classList.add('on'); start(); }
+
   /* Back on the link after asking: show where they stand rather than an empty form. */
   try {
-    var had = JSON.parse(localStorage.getItem(KEY) || 'null');
+    var had = C.preview || C.closed ? null : JSON.parse(localStorage.getItem(KEY) || 'null');
     if (had && Date.now() - had.at < 6 * 864e5) { start(); done(false, had.first); }
   } catch (e) {}
 

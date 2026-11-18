@@ -7,13 +7,14 @@
 # this script never touches it.
 set -e
 SRC=~/chemistry-labs-site
-# Every Reactions form listed in tools/data/reactions.json is published at its own path.
-RX=$(python3 -c "import json,os;print(' '.join(r['path'] for r in json.load(open(os.path.expanduser('~/chemistry-labs-site/tools/data/reactions.json')))))")
+# Reactions forms (gamenight/ and the rest) are made in the team hub and committed here by the
+# reactions-door worker. Each such folder holds a .reaction file, and this script never touches it.
 cd "$(dirname "$0")"
 git pull -q --rebase --autostash origin main
 python3 "$SRC/tools/build.py" > /dev/null
-find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md ! -name team ! -name time ! -name "studio-*" -exec rm -rf {} +
-for d in index.html 404.html robots.txt sitemap.xml apply $RX build-club practicals venture-catalyst calendar terms refunds privacy contact css fonts img; do cp -R "$SRC/$d" .; done
+KEEP=$(for d in */; do if [ -f "$d.reaction" ]; then printf ' ! -name %s' "${d%/}"; fi; done)
+eval "find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md ! -name team ! -name time ! -name 'studio-*' $KEEP -exec rm -rf {} +"
+for d in index.html 404.html robots.txt sitemap.xml apply build-club practicals venture-catalyst calendar terms refunds privacy contact css fonts img; do cp -R "$SRC/$d" .; done
 mkdir -p js && cp "$SRC/js/v3.js" "$SRC/js/s.js" js/
 # The date tables stay on manavjoshi.com, one source of truth, so a date changed there shows here too.
 find index.html apply build-club practicals venture-catalyst calendar -name index.html -exec \
