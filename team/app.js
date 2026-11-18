@@ -250,6 +250,24 @@ function agreementsTile() {
     <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">New agreement</span><span class="t-sub">Opens the form and downloads a PDF</span></button>`;
 }
 
+function reactionsTile() {
+  if (!D.reactions) return "";
+  return `<button class="tile w2" data-rx><span class="t-label"><em>🃏</em>Reactions</span><span class="spacer"></span>
+    <span style="font-weight:600;font-size:18px;letter-spacing:-0.02em">Reactions forms</span><span class="t-sub">Make a sign-up page for an event</span></button>`;
+}
+
+/* Same way as the agreements: the page comes through the API, signed in, and opens on its own. */
+async function openReactions() {
+  const w = window.open("", "_blank");
+  try {
+    const r = await fetch(API + "/api/reactions", { headers: { "x-key": store.get() } });
+    if (r.status === 401) { store.set(""); login(); if (w) w.close(); return; }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Something went wrong.");
+    const url = URL.createObjectURL(new Blob([await r.text()], { type: "text/html" }));
+    if (w) w.location.href = url; else location.href = url;
+  } catch (e) { if (w) w.close(); alert(e.message || "Could not open the page."); }
+}
+
 async function openAgreements() {
   const w = window.open("", "_blank");
   try {
@@ -306,6 +324,7 @@ function draw() {
     <main class="grid">${tiles.join("")}</main></div>`;
   app.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => open(el.dataset.open, el)));
   app.querySelectorAll("[data-agree]").forEach((b) => b.addEventListener("click", openAgreements));
+  app.querySelectorAll("[data-rx]").forEach((b) => b.addEventListener("click", openReactions));
   app.querySelectorAll("[data-day]").forEach((v) => v.addEventListener("click", () => open("day", v, v.dataset.day)));
   app.querySelectorAll("[data-crm-ask]").forEach((b) => b.addEventListener("click", async () => { try { await api("/api/crm/request", {}); D.crmAsk.asked = true; draw(); } catch (e) { alert(e.message); } }));
   const q = (sel, fn) => { const el = app.querySelector(sel); if (el) el.addEventListener("click", fn); };
@@ -786,13 +805,13 @@ const linkTile = (l) => `<a class="tile app" data-tile="link:${esc(l.id)}" href=
 function homeTiles(d) {
   const owner = d.me.owner;
   const base = owner
-    ? ["people", "revenue", "alarm", "tasks", "events", "website", "social", "team", "projects", "founders", "room", "steps", "attend", "agreements", "crm", "add"]
+    ? ["people", "revenue", "alarm", "tasks", "events", "website", "social", "team", "projects", "founders", "room", "steps", "attend", "agreements", "reactions", "crm", "add"]
     : d.me.external ? ["mine", "alarm", "social", "jobs", "steps"]
-    : d.cal ? ["people", "mine", "alarm", "tasks", "events", "social", "crm", "room", "jobs", "steps", "add"]
-    : ["people", "mine", "alarm", "tasks", "founders", "events", "attend", "contacts", "agreements", "crm", "room", "jobs", "steps", "add"];
+    : d.cal ? ["people", "mine", "alarm", "tasks", "events", "social", "reactions", "crm", "room", "jobs", "steps", "add"]
+    : ["people", "mine", "alarm", "tasks", "founders", "events", "attend", "contacts", "agreements", "reactions", "crm", "room", "jobs", "steps", "add"];
   const make = { people: peopleTile, revenue: revenueTile, mine: mineTile, alarm: alarmTile, website: websiteTile, social: () => calTile(owner),
     team: teamTile, projects: projectsTile, room: roomTile, steps: () => stepsTile(true), attend: attendTile, contacts: contactsTile,
-    agreements: agreementsTile, crm: crmTile, jobs: jobTile, add: addTile, tasks: d.me.external ? () => "" : tasksTile, events: eventsTile, founders: foundersTile };
+    agreements: agreementsTile, reactions: reactionsTile, crm: crmTile, jobs: jobTile, add: addTile, tasks: d.me.external ? () => "" : tasksTile, events: eventsTile, founders: foundersTile };
   const html = {};
   for (const id of base) {
     let h = ""; try { h = make[id]() || ""; } catch (e) { console.error(id, e); }
@@ -809,7 +828,7 @@ function homeTiles(d) {
 }
 const TILE_NAMES = { people: "People in rooms", revenue: "Revenue", mine: "Your number", alarm: "What needs you", website: "Website this week", social: "Social calendar",
   team: "Team", projects: "Projects", room: "Next room", steps: "Your steps", attend: "Catalyst attendance", contacts: "Catalyst contacts sheet",
-  agreements: "Contract generator", crm: "CRM", jobs: "Job list", add: "New project", tasks: "Next steps", events: "What's on", founders: "Catalyst founders" };
+  agreements: "Contract generator", reactions: "Reactions forms", crm: "CRM", jobs: "Job list", add: "New project", tasks: "Next steps", events: "What's on", founders: "Catalyst founders" };
 
 async function saveLayout(order, hidden) {
   D.home.layout = { order, hidden };
@@ -1195,6 +1214,7 @@ function tourSteps() {
   }
   if (has("events")) s.push({ sel: "events", h: "Everything we're doing", p: ["Build Clubs in every city, practicals, Catalyst sessions and Reactions, on one calendar.", "Tap for the whole month. Add a Reactions plan and the whole team sees it."], aside: "always the latest dates" });
   if (has("founders")) s.push({ sel: "founders", h: "Your founders, by stage", p: ["To call, booked, talked, confirmed, contract sent, signed.", "Change a founder's Status in your sheet and they move here on their own."], aside: "no double entry" });
+  if (has("reactions")) s.push({ sel: "reactions", h: "Reactions forms", p: ["Make the sign-up page for a Reactions event, share its link, and close it when the table is full."] });
   if (has("agreements")) s.push({ sel: "agreements", h: "Agreements in a minute", p: ["Fill in a founder's details and get their agreement as a PDF."] });
   if (has("attend")) s.push({ sel: "attend", h: "Who came", p: ["Tick the founders after every session. Each one counts toward people in rooms."] });
   if (has("contacts")) s.push({ sel: "contacts", h: "Your contacts sheet", p: ["One tap away."] });
