@@ -215,7 +215,7 @@
 </div>
 
 
-<script type="application/json" id="rxCfg">{"slug": "mafia", "edition": "01", "title": "Thursday Mafia Night", "seats": 10, "open_max": 5, "door": "https://reactions-door.manavjoshi01.workers.dev", "sheet": "https://script.google.com/macros/s/AKfycbyIdrCDzYTx7XQQ5l8ByaFW6FsGuSIJJvwTkN449Fhq20HrZjIYTnZpOWI4qs8-2uP5gw/exec"}</script>
+<script type="application/json" id="rxCfg">{"slug": "mafia", "edition": "01", "title": "Thursday Mafia Night", "seats": 10, "open_max": 6, "open_min": 2, "open_on": {"2026-11-18": 6}, "door": "https://reactions-door.manavjoshi01.workers.dev", "sheet": "https://script.google.com/macros/s/AKfycbyIdrCDzYTx7XQQ5l8ByaFW6FsGuSIJJvwTkN449Fhq20HrZjIYTnZpOWI4qs8-2uP5gw/exec"}</script>
 <script>
 (function () {
   'use strict';
@@ -252,12 +252,20 @@
     })(places[dealt], k * gap);
   }
   function start() { if (ready) return; ready = true; deal(taken); }
-  /* Rolled from the date, not the clock, so a refresh never makes it jump; never more than open_max open. */
+  /* Seats shown open. A date in open_on pins that day's number; any other day rolls
+     between open_min and open_max from the date, so a refresh never makes it jump. */
   function roll() {
     var now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })),
-        key = C.slug + now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate(), h = 2166136261;
-    for (var j = 0; j < key.length; j++) { h ^= key.charCodeAt(j); h = (h * 16777619) >>> 0; }
-    return C.seats - (1 + (h % Math.max(1, Math.min(C.open_max, C.seats))));
+        p = function (n) { return (n < 10 ? '0' : '') + n; },
+        day = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate()),
+        lo = Math.max(1, C.open_min || 1), hi = Math.min(C.seats, Math.max(lo, C.open_max)), open;
+    if (C.open_on && C.open_on[day]) open = C.open_on[day];
+    else {
+      var key = C.slug + day, h = 2166136261;
+      for (var j = 0; j < key.length; j++) { h ^= key.charCodeAt(j); h = (h * 16777619) >>> 0; }
+      open = lo + h % (hi - lo + 1);
+    }
+    return C.seats - Math.min(C.seats, open);
   }
   leftEl.textContent = C.seats;
   deal(roll());
