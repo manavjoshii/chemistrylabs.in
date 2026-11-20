@@ -233,7 +233,7 @@
     var open = null, on = false, last = 0, snap = false, L = { x: 0, y: 0, w: 0, h: 0 };
     function target(img) {
       var rb = room.getBoundingClientRect(), tb = img.getBoundingClientRect(), ar = +img.getAttribute('data-r') || 1;
-      var big = Math.min(Math.max(T * 3.6, 230), 420, innerWidth * .78, rb.height * .7), w = ar >= 1 ? big : big * ar, h = ar >= 1 ? big / ar : big;
+      var big = Math.min(Math.max(T * 2.6, 190), 320, innerWidth * .7, rb.height * .6), w = ar >= 1 ? big : big * ar, h = ar >= 1 ? big / ar : big;
       var x = tb.left - rb.left + tb.width / 2 - w / 2, y = tb.top - rb.top + tb.height / 2 - h / 2;
       return { x: Math.min(Math.max(x, 8), rb.width - w - 8), y: Math.min(Math.max(y, 8), rb.height - h - 8), w: w, h: h };
     }
@@ -242,16 +242,20 @@
       L.x += (g.x - L.x) * k; L.y += (g.y - L.y) * k; L.w += (g.w - L.w) * k; L.h += (g.h - L.h) * k;
       lens.style.transform = 'translate3d(' + L.x.toFixed(1) + 'px,' + L.y.toFixed(1) + 'px,0)'; lens.style.width = L.w.toFixed(1) + 'px'; lens.style.height = L.h.toFixed(1) + 'px';
     }
+    /* The pop-up never shows a blurry tile blown up: it waits until the full photo has loaded, and if it never loads, nothing opens */
+    var want = null;
     function show(img) {
-      if (open && open.img === img) return;
-      var r = rowOf(img), was = open, u = '/img/wall/l/' + img.getAttribute('data-id') + '.webp';
-      open = { img: img }; rows.forEach(function (q) { q.aim = q === r ? 0 : 1; });
-      lin.style.backgroundImage = 'url("' + (img.currentSrc || img.src) + '")';
-      if (limg.getAttribute('src') === u && limg.complete) limg.classList.add('in');
-      else { limg.classList.remove('in'); limg.onload = function () { if (limg.getAttribute('src') === u) limg.classList.add('in'); }; limg.src = u; }
+      if ((open && open.img === img) || want === img) return;
+      var r = rowOf(img), u = '/img/wall/l/' + img.getAttribute('data-id') + '.webp', pre = new Image();
+      want = img; rows.forEach(function (q) { q.aim = q === r ? 0 : 1; });
+      pre.onload = function () { if (want === img && pre.naturalWidth) reveal(img, u); };
+      pre.src = u;
+    }
+    function reveal(img, u) {
+      var was = open; want = null; open = { img: img }; limg.src = u; limg.classList.add('in');
       if (!was) { snap = true; follow(16); lens.classList.remove('on'); void lens.offsetWidth; lens.classList.add('on'); room.classList.add('lit'); }
     }
-    function hide() { if (!open) return; open = null; rows.forEach(function (q) { q.aim = 1; }); lens.classList.remove('on'); room.classList.remove('lit'); }
+    function hide() { want = null; if (!open) { rows.forEach(function (q) { q.aim = 1; }); return; } open = null; rows.forEach(function (q) { q.aim = 1; }); lens.classList.remove('on'); room.classList.remove('lit'); }
 
     function frame(t) {
       var dt = last ? Math.min(t - last, 48) : 16; last = t;
@@ -578,33 +582,60 @@
   });
 })();
 
-/* Who shows up: tap a block to see who is in it. The big numbers count up once. */
+/* Who shows up. A block opens to show who is in it; the quotes are a deck you swipe; the big numbers count up once. */
 (function () {
   var tm = document.querySelector('.tm'); if (!tm) return;
-  var tiles = [].slice.call(tm.querySelectorAll('.tm__t')), li = [].slice.call(document.querySelectorAll('.wall2 li')), more = document.querySelector('.wall2__more'), head = document.getElementById('w1b');
-  var CAP = matchMedia('(max-width:640px)').matches ? 18 : 36, k = '', open = false;
-  function draw() {
-    tm.classList.toggle('picked', !!k);
-    tiles.forEach(function (t) { t.setAttribute('aria-pressed', t.getAttribute('data-k') === k); });
-    var n = 0, first = null;
-    li.forEach(function (l) { var m = !k || l.getAttribute('data-k') === k; if (m) n++; l.hidden = !(m && (open || n <= CAP)); l.classList.remove('lead'); if (!l.hidden && !first) first = l; });
-    if (first) first.classList.add('lead');
-    more.hidden = open || n <= CAP;
+  var tiles = [].slice.call(tm.querySelectorAll('.tm__t'));
+  function close() { tm.classList.remove('open'); tiles.forEach(function (t) { t.classList.remove('open'); t.querySelector('.tm__b').setAttribute('aria-expanded', 'false'); }); }
+  tiles.forEach(function (t) {
+    var b = t.querySelector('.tm__b');
+    b.addEventListener('click', function () {
+      var was = t.classList.contains('open'); close();
+      if (!was) { tm.classList.add('open'); t.classList.add('open'); b.setAttribute('aria-expanded', 'true'); t.querySelector('.tm__in').scrollTop = 0; }
+    });
+  });
+  addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+})();
+(function () {
+  var sk = document.querySelector('.sk'); if (!sk) return;
+  var cards = [].slice.call(sk.querySelectorAll('.sk__card')), n = cards.length, top = 0, drag = null;
+  var calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function lay() { cards.forEach(function (c, i) { var d = (i - top + n) % n; c.style.setProperty('--d', Math.min(d, 3)); c.style.zIndex = 20 - d; c.style.opacity = d > 3 ? '0' : ''; c.setAttribute('aria-hidden', d ? 'true' : 'false'); }); }
+  function fly(c, dir) {
+    c.classList.add('fly'); c.style.transform = 'translate(' + dir * 125 + '%,-6%) rotate(' + dir * 16 + 'deg)';
+    top = (top + 1) % n; lay();
+    setTimeout(function () { c.classList.remove('fly'); c.style.transition = 'none'; c.style.transform = ''; lay(); void c.offsetWidth; c.style.transition = ''; }, calm ? 0 : 430);
   }
-  tiles.forEach(function (t) { t.addEventListener('click', function () {
-    var v = t.getAttribute('data-k'); k = k === v ? '' : v; open = false; draw();
-    if (k && head.getBoundingClientRect().top > innerHeight * .7) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }); });
-  more.addEventListener('click', function () { open = true; draw(); });
-  draw();
+  sk.addEventListener('pointerdown', function (e) {
+    var c = cards[top]; if (!c.contains(e.target)) return;
+    drag = { c: c, x: e.clientX, y: e.clientY, t: performance.now(), dx: 0 }; c.setPointerCapture(e.pointerId); c.style.transition = 'none';
+  });
+  sk.addEventListener('pointermove', function (e) {
+    if (!drag) return; drag.dx = e.clientX - drag.x;
+    drag.c.style.transform = 'translate(' + drag.dx + 'px,' + (e.clientY - drag.y) * .2 + 'px) rotate(' + drag.dx / 16 + 'deg)';
+  });
+  function up() {
+    if (!drag) return; var c = drag.c, dt = performance.now() - drag.t, v = drag.dx / Math.max(1, dt);
+    c.style.transition = '';
+    if (Math.abs(drag.dx) > 90 || Math.abs(v) > .55) fly(c, drag.dx < 0 ? -1 : 1);
+    else if (Math.abs(drag.dx) < 6 && dt < 300) fly(c, -1);
+    else c.style.transform = '';
+    drag = null;
+  }
+  sk.addEventListener('pointerup', up); sk.addEventListener('pointercancel', up);
+  sk.querySelector('.sk__next').addEventListener('click', function () { fly(cards[top], -1); });
+  lay();
 })();
 (function () {
   var els = [].slice.call(document.querySelectorAll('[data-count]'));
-  if (!els.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  els.forEach(function (el) {
-    var to = +el.getAttribute('data-count'), t0 = 0; el.textContent = '0';
-    function step(t) { if (!t0) t0 = t; var p = Math.min(1, (t - t0) / 1100); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); }
-    setTimeout(function () { requestAnimationFrame(step); }, 900);
-    setTimeout(function () { el.textContent = to; }, 3200);   /* a browser that stalls frames still ends on the real number */
-  });
+  if (!els.length || matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function (es) { es.forEach(function (e) {
+    if (!e.isIntersecting) return; io.unobserve(e.target);
+    var el = e.target, to = +el.getAttribute('data-count'), dec = +(el.getAttribute('data-dec') || 0), t0 = 0;
+    function step(t) { if (!t0) t0 = t; var p = Math.min(1, (t - t0) / 1200); el.textContent = (to * (1 - Math.pow(1 - p, 3))).toFixed(dec); if (p < 1) requestAnimationFrame(step); }
+    var wait = performance.now() < 2000 ? 950 : 0;   /* behind the loading screen on a first visit, so wait for it */
+    el.textContent = (0).toFixed(dec); setTimeout(function () { requestAnimationFrame(step); }, wait);
+    setTimeout(function () { el.textContent = to.toFixed(dec); }, wait + 2400);   /* a browser that stalls frames still ends on the real number */
+  }); }, { threshold: .6 });
+  els.forEach(function (el) { io.observe(el); });
 })();
