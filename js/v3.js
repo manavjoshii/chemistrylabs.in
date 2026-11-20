@@ -179,7 +179,7 @@
     var room = wall.parentNode, pipe = /[?&]pipe\b/.test(location.search), lens = document.createElement('div'), lin = document.createElement('div'), limg = new Image();
     lens.className = 'lens'; lin.className = 'lens__in'; limg.alt = ''; lin.appendChild(limg); lens.appendChild(lin); room.appendChild(lens);
     wall.classList.add('in3d');
-    var G = 4, P = 700, A = .15, T = 90, W = 0, H = 0, HV = .5, spin = 0, sv = 0, dragging = false, ready = false;
+    var G = 4, P = 700, A = .15, T = 90, W = 0, H = 0, spin = 0, sv = 0, dragging = false, ready = false;
     var META = JSON.parse(wall.getAttribute('data-photos') || '{}'), IDS = Object.keys(META), used = {};
     var BIAS = { top: { R: 3, G: 3, F: 1, B: 1, D: .6 }, mid: { F: 3, B: 1.4, R: .7, G: .5, D: .8 }, low: { B: 2.4, D: 2, F: 1, R: .8, G: .5 } };
     function event(id) { return id.slice(0, 2) === 'jp' ? 'jaipur' : { h: 'aug9', g: 'bnb', n: 'nov15' }[id[0]] || 'site'; }
@@ -207,25 +207,34 @@
     function leave(im) { if (im._id) used[META[im._id][3]]--; }
     if (document.readyState === 'complete') setTimeout(feed, 200); else addEventListener('load', function () { setTimeout(feed, 200); });
 
-    /* The sphere's radius is half the wall's longer side, and the eye sits at its centre. A tile spans A radians. */
+    /* The eye sits P from the screen, where P is half the wall's longer side. The sphere's radius is K times that, so its centre is far
+       behind the viewer and the wall reads almost flat, curving gently at the edges like a horizon. A tile spans A radians. */
+    var K = pipe ? 1 : 3, R = 2100;
+    function fac(z) { return P / (P - z); }
     function size() {
-      W = wall.clientWidth; H = wall.clientHeight; P = Math.max(W, H) / 2; A = W < 700 ? .2 : .15; T = P * A - G; HV = Math.atan(W / 2 / P);
+      W = wall.clientWidth; H = wall.clientHeight; P = Math.max(W, H) / 2; R = P * K; A = P * (W < 700 ? .2 : .17) / R; T = R * A - G;
       wall.style.perspective = P.toFixed(1) + 'px'; room.style.setProperty('--t', T.toFixed(1) + 'px');
-      var vmax = pipe ? H / 2 + T / 2 : Math.atan(H / 2 / P) + A / 2;
       rows.forEach(function (r) {
-        r.phi = r.lat * A; r.y = r.lat * P * A; r.rc = P * (pipe ? 1 : Math.cos(r.phi)); r.L = r.tiles.length * P * A;
-        r.vis = Math.min(HV + .75 * P * A / r.rc, 1.4); r.edge = pipe ? Math.max(Math.abs(r.y) - T / 2, 0) : P * Math.tan(Math.max(Math.abs(r.phi) - A / 2, 0));
-        r.show = (pipe ? Math.abs(r.y) : Math.abs(r.phi)) < vmax; r.el.style.display = r.show ? '' : 'none';
+        r.phi = r.lat * A; r.y = r.lat * R * A; r.rc = R * (pipe ? 1 : Math.cos(r.phi)); r.L = r.tiles.length * R * A;
+        var n = Math.max(Math.abs(r.phi) - A / 2, 0);
+        r.show = pipe ? Math.abs(r.y) - T / 2 < H / 2 : R * Math.sin(n) * fac(R * (1 - Math.cos(n))) < H / 2 + 2; r.el.style.display = r.show ? '' : 'none';
         if (!r.show) r.tiles.forEach(function (im) { if (im._v) { leave(im); im._v = false; im.style.visibility = 'hidden'; } });
       });
     }
+    /* A tile is drawn only while some of it is on screen, and never once it swings close to the eye */
+    function seen(r, a) {
+      if (Math.abs(a) > 1.3) return false;
+      var cp = pipe ? 1 : Math.cos(r.phi), z = R * (1 - cp * Math.cos(a)); if (z > P * .7) return false;
+      var f = fac(z), h = T * .52 * f, x = R * cp * Math.sin(a) * f, y = (pipe ? r.y : R * Math.sin(r.phi)) * f;
+      return Math.abs(x) - h < W / 2 && Math.abs(y) - h < H / 2 + 2;
+    }
     function lay(r) {
-      var loop = r.L / r.rc, half = loop / 2, tail = pipe ? 'translate3d(0,' + r.y.toFixed(1) + 'px,' + (-P).toFixed(1) + 'px)' : 'rotateX(' + r.phi.toFixed(4) + 'rad) translateZ(' + (-P).toFixed(1) + 'px)';
+      var loop = r.L / r.rc, half = loop / 2, tail = pipe ? 'translate3d(0,' + r.y.toFixed(1) + 'px,' + (-R).toFixed(1) + 'px)' : 'rotateX(' + r.phi.toFixed(4) + 'rad) translateZ(' + (-R).toFixed(1) + 'px)';
       for (var k = 0; k < r.tiles.length; k++) {
-        var a = (r.x + k * P * A) / r.rc + spin; a = ((a + half) % loop + loop) % loop - half;
-        var im = r.tiles[k], vis = Math.abs(a) < r.vis && r.edge < (H / 2 + 2) * Math.cos(a);
+        var a = (r.x + k * R * A) / r.rc + spin; a = ((a + half) % loop + loop) % loop - half;
+        var im = r.tiles[k], vis = seen(r, a);
         if (vis !== !!im._v) { if (vis) enter(r, k); else leave(im); im.style.visibility = vis ? '' : 'hidden'; im._v = vis; }
-        if (vis) im.style.transform = 'translateZ(' + P.toFixed(1) + 'px) rotateY(' + a.toFixed(4) + 'rad) ' + tail;
+        if (vis) im.style.transform = 'translateZ(' + R.toFixed(1) + 'px) rotateY(' + a.toFixed(4) + 'rad) ' + tail;
       }
     }
     function rowOf(img) { for (var k = 0; k < rows.length; k++) if (rows[k].track === img.parentNode) return rows[k]; }
@@ -280,7 +289,7 @@
       if (!down) return;
       if (!dragging && Math.abs(e.clientX - sx) > 6) { dragging = true; wall.classList.add('held'); hide(); }
       if (!dragging) return;
-      var d = e.clientX - lx, n = performance.now(); spin -= d / P; sv = -d / P / Math.max(n - lt, 8); lx = e.clientX; lt = n;
+      var d = e.clientX - lx, n = performance.now(); spin -= d / R; sv = -d / R / Math.max(n - lt, 8); lx = e.clientX; lt = n;
     });
     wall.addEventListener('pointerup', function (e) {
       if (!down) return; down = false; wall.classList.remove('held');
