@@ -167,32 +167,130 @@
     });
   });
 
-  /* ── The room: two rows of photographs slide past. Hold or drag a row and it waits for you ── */
-  /* Photos inside a clipped row never load lazily ahead of time, so all of them are fetched once the page itself is done */
-  function feedWall() { document.querySelectorAll('.wall img[data-src]').forEach(function (i) { i.src = i.getAttribute('data-src'); i.removeAttribute('data-src'); }); }
-  if (document.readyState === 'complete') setTimeout(feedWall, 200); else addEventListener('load', function () { setTimeout(feedWall, 200); });
-  document.querySelectorAll('.wall__row').forEach(function (row, i) {
-    var track = row.firstElementChild, dir = i % 2 ? 1 : -1, x = 0, v = 0, held = false, over = false, on = false, rest = 0, lx = 0, lt = 0, last = 0, loop = 1;
-    function size() { loop = track.scrollWidth / 2 || 1; }
-    function place() { while (x <= -loop) x += loop; while (x > 0) x -= loop; track.style.transform = 'translate3d(' + x.toFixed(2) + 'px,0,0)'; }
-    function step(t) {
-      var dt = last ? Math.min(t - last, 48) : 16; last = t;
-      if (!held) {
-        if (Math.abs(v) > 0.03) { x += v * dt; v *= Math.pow(0.995, dt); }
-        else if (!calm && !over && t > rest) x += dir * 0.035 * dt;
-        place();
-      }
-      if (on) requestAnimationFrame(step); else last = 0;
+  /* ── The room: you stand inside a sphere of small photographs (20 Nov, second pass) ──
+     Each row is a ring that turns at its own pace. Drag anywhere to spin the whole room. Point at a photo and it opens
+     whole while its ring slows to a stop; on touch, tap to open and tap again or anywhere else to close.
+     ?pipe on the address shows the same wall as the inside of a pipe, for comparison.
+     A tile takes its photo the moment it slides into view, from the photos not already on screen (near-identical shots
+     count as one), so the same photo is almost never seen twice at once. Rows keep the brand order: whole rooms on top,
+     faces in the middle, people building below. */
+  (function () {
+    var wall = document.querySelector('.wall'); if (!wall) return;
+    var room = wall.parentNode, pipe = /[?&]pipe\b/.test(location.search), lens = document.createElement('div'), lin = document.createElement('div'), limg = new Image();
+    lens.className = 'lens'; lin.className = 'lens__in'; limg.alt = ''; lin.appendChild(limg); lens.appendChild(lin); room.appendChild(lens);
+    wall.classList.add('in3d');
+    var G = 4, P = 700, A = .15, T = 90, W = 0, H = 0, HV = .5, spin = 0, sv = 0, dragging = false, ready = false;
+    var META = JSON.parse(wall.getAttribute('data-photos') || '{}'), IDS = Object.keys(META), used = {};
+    var BIAS = { top: { R: 3, G: 3, F: 1, B: 1, D: .6 }, mid: { F: 3, B: 1.4, R: .7, G: .5, D: .8 }, low: { B: 2.4, D: 2, F: 1, R: .8, G: .5 } };
+    function event(id) { return id.slice(0, 2) === 'jp' ? 'jaipur' : { h: 'aug9', g: 'bnb', n: 'nov15' }[id[0]] || 'site'; }
+    function src(id) { return '/img/wall/t/' + id + '.webp'; }
+    var rows = [].slice.call(wall.children).map(function (row, i, all) {
+      [].slice.call(row.firstElementChild.children).forEach(function (im) { im.removeAttribute('data-src'); im.removeAttribute('src'); im.style.visibility = 'hidden'; });
+      return { i: i, el: row, track: row.firstElementChild, tiles: [].slice.call(row.firstElementChild.children), lat: i - (all.length - 1) / 2, dir: i % 2 ? 1 : -1,
+        sp: 0.018 + 0.012 * ((i * 4) % 7) / 6, x: (i * 137) % 400, s: 1, aim: 1, show: true };
+    });
+    /* Every tile image loads once the page itself is done, so a tile that changes photo changes at once */
+    function feed() { ready = true; IDS.forEach(function (id) { new Image().src = src(id); }); rows.forEach(function (r) { r.tiles.forEach(function (im) { if (im._id && !im.getAttribute('src')) im.src = src(im._id); }); }); }
+    function pick(r, k) {
+      var n = r.tiles.length, nb = [r.tiles[(k + 1) % n]._id, r.tiles[(k + n - 1) % n]._id].filter(Boolean).map(event);
+      var band = r.i < 3 ? 'top' : r.i < 6 ? 'mid' : 'low', best = null, bs = -1, spare = null, ss = 1e9;
+      IDS.forEach(function (id) {
+        var m = META[id], u = used[m[3]] || 0, sc = BIAS[band][m[1]] * m[2] * (.45 + Math.random()) * (nb.indexOf(event(id)) < 0 ? 1 : .3);
+        if (!u) { if (sc > bs) { bs = sc; best = id; } } else if (u - sc / 100 < ss) { ss = u - sc / 100; spare = id; }
+      });
+      return best || spare;
     }
-    row.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') over = true; });
-    row.addEventListener('pointerleave', function () { over = false; });
-    row.addEventListener('pointerdown', function (e) { held = true; v = 0; lx = e.clientX; lt = performance.now(); row.classList.add('held'); try { row.setPointerCapture(e.pointerId); } catch (x2) {} });
-    row.addEventListener('pointermove', function (e) { if (!held) return; var d = e.clientX - lx, n = performance.now(); x += d; v = d / Math.max(n - lt, 8); lx = e.clientX; lt = n; place(); });
-    function drop() { if (!held) return; held = false; row.classList.remove('held'); rest = performance.now() + 1600; if (performance.now() - lt > 80) v = 0; }
-    row.addEventListener('pointerup', drop); row.addEventListener('pointercancel', drop);
-    size(); addEventListener('resize', size); addEventListener('load', size);
-    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { var was = on; on = es[0].isIntersecting; if (on && !was) requestAnimationFrame(step); }).observe(row);
-  });
+    function enter(r, k) {
+      var im = r.tiles[k], id = pick(r, k), m = META[id]; im._id = id; used[m[3]] = (used[m[3]] || 0) + 1;
+      im.setAttribute('data-id', id); im.setAttribute('data-r', m[0]); if (ready) im.src = src(id);
+    }
+    function leave(im) { if (im._id) used[META[im._id][3]]--; }
+    if (document.readyState === 'complete') setTimeout(feed, 200); else addEventListener('load', function () { setTimeout(feed, 200); });
+
+    /* The sphere's radius is half the wall's longer side, and the eye sits at its centre. A tile spans A radians. */
+    function size() {
+      W = wall.clientWidth; H = wall.clientHeight; P = Math.max(W, H) / 2; A = W < 700 ? .2 : .15; T = P * A - G; HV = Math.atan(W / 2 / P);
+      wall.style.perspective = P.toFixed(1) + 'px'; room.style.setProperty('--t', T.toFixed(1) + 'px');
+      var vmax = pipe ? H / 2 + T / 2 : Math.atan(H / 2 / P) + A / 2;
+      rows.forEach(function (r) {
+        r.phi = r.lat * A; r.y = r.lat * P * A; r.rc = P * (pipe ? 1 : Math.cos(r.phi)); r.L = r.tiles.length * P * A;
+        r.vis = Math.min(HV + .75 * P * A / r.rc, 1.4); r.edge = pipe ? Math.max(Math.abs(r.y) - T / 2, 0) : P * Math.tan(Math.max(Math.abs(r.phi) - A / 2, 0));
+        r.show = (pipe ? Math.abs(r.y) : Math.abs(r.phi)) < vmax; r.el.style.display = r.show ? '' : 'none';
+        if (!r.show) r.tiles.forEach(function (im) { if (im._v) { leave(im); im._v = false; im.style.visibility = 'hidden'; } });
+      });
+    }
+    function lay(r) {
+      var loop = r.L / r.rc, half = loop / 2, tail = pipe ? 'translate3d(0,' + r.y.toFixed(1) + 'px,' + (-P).toFixed(1) + 'px)' : 'rotateX(' + r.phi.toFixed(4) + 'rad) translateZ(' + (-P).toFixed(1) + 'px)';
+      for (var k = 0; k < r.tiles.length; k++) {
+        var a = (r.x + k * P * A) / r.rc + spin; a = ((a + half) % loop + loop) % loop - half;
+        var im = r.tiles[k], vis = Math.abs(a) < r.vis && r.edge < (H / 2 + 2) * Math.cos(a);
+        if (vis !== !!im._v) { if (vis) enter(r, k); else leave(im); im.style.visibility = vis ? '' : 'hidden'; im._v = vis; }
+        if (vis) im.style.transform = 'translateZ(' + P.toFixed(1) + 'px) rotateY(' + a.toFixed(4) + 'rad) ' + tail;
+      }
+    }
+    function rowOf(img) { for (var k = 0; k < rows.length; k++) if (rows[k].track === img.parentNode) return rows[k]; }
+
+    var open = null, on = false, last = 0, snap = false, L = { x: 0, y: 0, w: 0, h: 0 };
+    function target(img) {
+      var rb = room.getBoundingClientRect(), tb = img.getBoundingClientRect(), ar = +img.getAttribute('data-r') || 1;
+      var big = Math.min(Math.max(T * 3.6, 230), 420, innerWidth * .78, rb.height * .7), w = ar >= 1 ? big : big * ar, h = ar >= 1 ? big / ar : big;
+      var x = tb.left - rb.left + tb.width / 2 - w / 2, y = tb.top - rb.top + tb.height / 2 - h / 2;
+      return { x: Math.min(Math.max(x, 8), rb.width - w - 8), y: Math.min(Math.max(y, 8), rb.height - h - 8), w: w, h: h };
+    }
+    function follow(dt) {
+      var g = target(open.img), k = snap ? 1 : 1 - Math.exp(-dt / 70); snap = false;
+      L.x += (g.x - L.x) * k; L.y += (g.y - L.y) * k; L.w += (g.w - L.w) * k; L.h += (g.h - L.h) * k;
+      lens.style.transform = 'translate3d(' + L.x.toFixed(1) + 'px,' + L.y.toFixed(1) + 'px,0)'; lens.style.width = L.w.toFixed(1) + 'px'; lens.style.height = L.h.toFixed(1) + 'px';
+    }
+    function show(img) {
+      if (open && open.img === img) return;
+      var r = rowOf(img), was = open, u = '/img/wall/l/' + img.getAttribute('data-id') + '.webp';
+      open = { img: img }; rows.forEach(function (q) { q.aim = q === r ? 0 : 1; });
+      lin.style.backgroundImage = 'url("' + (img.currentSrc || img.src) + '")';
+      if (limg.getAttribute('src') === u && limg.complete) limg.classList.add('in');
+      else { limg.classList.remove('in'); limg.onload = function () { if (limg.getAttribute('src') === u) limg.classList.add('in'); }; limg.src = u; }
+      if (!was) { snap = true; follow(16); lens.classList.remove('on'); void lens.offsetWidth; lens.classList.add('on'); room.classList.add('lit'); }
+    }
+    function hide() { if (!open) return; open = null; rows.forEach(function (q) { q.aim = 1; }); lens.classList.remove('on'); room.classList.remove('lit'); }
+
+    function frame(t) {
+      var dt = last ? Math.min(t - last, 48) : 16; last = t;
+      if (!dragging) { if (Math.abs(sv) > 1e-6) { spin += sv * dt; sv *= Math.pow(0.995, dt); } else sv = 0; }
+      rows.forEach(function (r) {
+        if (!r.show) return;
+        r.s += (r.aim - r.s) * (1 - Math.exp(-dt / 160));
+        if (!calm) r.x = (r.x + r.dir * r.sp * r.s * dt) % r.L;
+        lay(r);
+      });
+      if (open) follow(dt);
+      if (on) requestAnimationFrame(frame); else last = 0;
+    }
+
+    /* Point, drag, tap */
+    var down = false, sx = 0, lx = 0, lt = 0;
+    wall.addEventListener('pointerover', function (e) { var img = e.pointerType === 'mouse' && !down && e.target.closest('img'); if (img) show(img); });
+    wall.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse' && !down) hide(); });
+    document.addEventListener('pointerdown', function (e) { if (open && e.pointerType !== 'mouse' && !wall.contains(e.target)) hide(); }, true);
+    wall.addEventListener('pointerdown', function (e) { down = true; dragging = false; sv = 0; sx = lx = e.clientX; lt = performance.now(); try { wall.setPointerCapture(e.pointerId); } catch (x) {} });
+    wall.addEventListener('pointermove', function (e) {
+      if (!down) return;
+      if (!dragging && Math.abs(e.clientX - sx) > 6) { dragging = true; wall.classList.add('held'); hide(); }
+      if (!dragging) return;
+      var d = e.clientX - lx, n = performance.now(); spin -= d / P; sv = -d / P / Math.max(n - lt, 8); lx = e.clientX; lt = n;
+    });
+    wall.addEventListener('pointerup', function (e) {
+      if (!down) return; down = false; wall.classList.remove('held');
+      if (dragging) { dragging = false; if (performance.now() - lt > 80) sv = 0; return; }
+      if (e.pointerType === 'mouse') return;
+      var hit = document.elementFromPoint(e.clientX, e.clientY), img = hit && hit.closest && hit.closest('.wall img');
+      if (img && !(open && open.img === img)) show(img); else hide();
+    });
+    wall.addEventListener('pointercancel', function () { down = false; dragging = false; wall.classList.remove('held'); });
+
+    size(); rows.forEach(lay); addEventListener('resize', size);
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { var was = on; on = es[0].isIntersecting; if (on && !was) requestAnimationFrame(frame); if (!on) hide(); }).observe(wall);
+    else { on = true; requestAnimationFrame(frame); }
+  })();
 
   /* ── The deck: each card slides up over the last; the one underneath settles back ── */
   var deck = document.querySelector('.deck'), xcards = [].slice.call(document.querySelectorAll('.xcard')), snaps = [], tabLinks = [].slice.call(document.querySelectorAll('.tabs a'));
@@ -477,5 +575,36 @@
       /* Until someone pulls it, the lever keeps offering itself */
       setInterval(function () { if (inView && (lost ? !(lostBox.classList.contains('won')) : !pulls) && !spinning && !start && leverAt < 0.01 && seen) moveLever(0.2, 240, ease, function () { moveLever(0, 520, recoil); }); }, 3800);
     }
+  });
+})();
+
+/* Who shows up: tap a block to see who is in it. The big numbers count up once. */
+(function () {
+  var tm = document.querySelector('.tm'); if (!tm) return;
+  var tiles = [].slice.call(tm.querySelectorAll('.tm__t')), li = [].slice.call(document.querySelectorAll('.wall2 li')), more = document.querySelector('.wall2__more'), head = document.getElementById('w1b');
+  var CAP = matchMedia('(max-width:640px)').matches ? 18 : 36, k = '', open = false;
+  function draw() {
+    tm.classList.toggle('picked', !!k);
+    tiles.forEach(function (t) { t.setAttribute('aria-pressed', t.getAttribute('data-k') === k); });
+    var n = 0, first = null;
+    li.forEach(function (l) { var m = !k || l.getAttribute('data-k') === k; if (m) n++; l.hidden = !(m && (open || n <= CAP)); l.classList.remove('lead'); if (!l.hidden && !first) first = l; });
+    if (first) first.classList.add('lead');
+    more.hidden = open || n <= CAP;
+  }
+  tiles.forEach(function (t) { t.addEventListener('click', function () {
+    var v = t.getAttribute('data-k'); k = k === v ? '' : v; open = false; draw();
+    if (k && head.getBoundingClientRect().top > innerHeight * .7) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }); });
+  more.addEventListener('click', function () { open = true; draw(); });
+  draw();
+})();
+(function () {
+  var els = [].slice.call(document.querySelectorAll('[data-count]'));
+  if (!els.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  els.forEach(function (el) {
+    var to = +el.getAttribute('data-count'), t0 = 0; el.textContent = '0';
+    function step(t) { if (!t0) t0 = t; var p = Math.min(1, (t - t0) / 1100); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); }
+    setTimeout(function () { requestAnimationFrame(step); }, 900);
+    setTimeout(function () { el.textContent = to; }, 3200);   /* a browser that stalls frames still ends on the real number */
   });
 })();

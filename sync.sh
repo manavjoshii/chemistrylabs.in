@@ -14,10 +14,10 @@ git pull -q --rebase --autostash origin main
 python3 "$SRC/tools/build.py" > /dev/null
 KEEP=$(for d in */; do if [ -f "$d.reaction" ]; then printf ' ! -name %s' "${d%/}"; fi; done)
 eval "find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sync.sh ! -name CNAME ! -name README.md ! -name team ! -name time ! -name 'studio-*' $KEEP -exec rm -rf {} +"
-for d in index.html 404.html robots.txt sitemap.xml apply build-club practicals venture-catalyst calendar terms refunds privacy contact css fonts img; do cp -R "$SRC/$d" .; done
+for d in index.html 404.html robots.txt sitemap.xml apply build-club practicals venture-catalyst calendar who-shows-up terms refunds privacy contact css fonts img; do cp -R "$SRC/$d" .; done
 mkdir -p js && cp "$SRC/js/v3.js" "$SRC/js/s.js" js/
 # The date tables stay on manavjoshi.com, one source of truth, so a date changed there shows here too.
-find index.html apply build-club practicals venture-catalyst calendar -name index.html -exec \
+find index.html apply build-club practicals venture-catalyst calendar who-shows-up -name index.html -exec \
   sed -i '' -E 's#src="/js/(smbc-cities|practicals|city-wheel)\.js#src="https://manavjoshi.com/js/\1.js#g' {} +
 touch .nojekyll
 git add -A
