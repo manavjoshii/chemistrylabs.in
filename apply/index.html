@@ -3,7 +3,7 @@
 <title>Request an invite | Chemistry Labs</title><meta name="description" content="One form for every Chemistry Labs experience."><meta name="theme-color" content="#100d09">
 <link rel="canonical" href="https://chemistrylabs.in/apply/"><meta property="og:url" content="https://chemistrylabs.in/apply/"><meta property="og:title" content="Request an invite | Chemistry Labs"><meta property="og:description" content="One form for every Chemistry Labs experience."><meta property="og:type" content="website"><meta property="og:site_name" content="Chemistry Labs"><meta property="og:locale" content="en_IN"><meta property="og:image" content="https://chemistrylabs.in/img/og/home.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Request an invite | Chemistry Labs"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml"><link rel="icon" href="/img/favicon.png" type="image/png" sizes="64x64"><link rel="preload" href="/fonts/HelveticaNowDisplay-Black.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/img/things/flask-sm.webp" as="image">
-<link rel="stylesheet" href="/css/v3.css"><link rel="stylesheet" href="/css/forms.css">
+<link rel="stylesheet" href="/css/v3.css"><link rel="stylesheet" href="/css/forms.css?v=5f8f43be">
 <style>.curtain{position:fixed;inset:0;z-index:200;background:#17823f;color:#fdf8f0;display:grid;place-items:center;--r:0px;-webkit-mask:radial-gradient(circle at 50% calc(50% - 15vh),transparent var(--r),#000 calc(var(--r) + 1px));mask:radial-gradient(circle at 50% calc(50% - 15vh),transparent var(--r),#000 calc(var(--r) + 1px));animation:curtainGone .01s 5s forwards}
 .curtain-late .curtain{opacity:0;animation:curtainShow .15s .5s forwards,curtainGone .01s 5s forwards}
 .curtain__logo{position:absolute;left:clamp(26px,6vw,96px);top:clamp(12px,2vh,20px);width:clamp(92px,9.2vw,136px)}
@@ -55,9 +55,12 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
       <button type="button" class="again-btn" id="againBtn">Just pick a Sunday</button>
     </p>
 
-    <form class="form" id="f" novalidate>
-<div class="fld keep" id="toFld"><span class="lbl" id="lblTo">What do you want to come to?</span><div class="pick" id="toPick" role="radiogroup" aria-labelledby="lblTo"><input type="radio" name="to" id="to_club" value="club"><label for="to_club">Sunday Morning Build Club</label><input type="radio" name="to" id="to_content" value="content"><label for="to_content">Founder Content</label></div><p class="hint" id="toNote" style="display:none">Reactions opens after your first experience. Pick one to start.</p></div>
-      <div class="duo">
+    <form class="form oneform" id="f" novalidate>
+<section class="grp grp--when"><h3 class="grp__h">What and when</h3><div class="grp__b"><div class="fld keep" id="toFld"><span class="lbl" id="lblTo">What do you want to come to?</span><div class="pick" id="toPick" role="radiogroup" aria-labelledby="lblTo"><input type="radio" name="to" id="to_club" value="club"><label for="to_club">Sunday Morning Build Club</label><input type="radio" name="to" id="to_content" value="content"><label for="to_content">Founder Content</label></div><p class="hint" id="toNote" style="display:none">Reactions opens after your first experience. Pick one to start.</p></div><div class="fld keep" id="dFld">
+        <span class="lbl" id="lblD">Which Sunday?</span>
+        <div class="pick pick-d" id="dPick" role="radiogroup" aria-labelledby="lblD"></div><div class="pick pick-d" id="dPick2" role="radiogroup" aria-labelledby="lblD" style="display:none"></div>
+      </div><p class="nudge"><q>Worth cancelling a family lunch with the cousins I love btw!</q> <span>A personal care founder, Ahmedabad</span></p></div></section>
+<section class="grp grp--you"><h3 class="grp__h">About you</h3><div class="grp__b"><div class="duo">
         <div class="fld">
           <label for="fName">Name</label>
           <input type="text" id="fName" autocomplete="name" maxlength="60" placeholder="your name">
@@ -66,42 +69,14 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
           <label for="fPhone">Contact number</label>
           <input type="tel" id="fPhone" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="98765 43210">
         </div>
-      </div>
-
-      <div class="fld">
+      </div><div class="pair"><div class="fld">
         <label for="fEmail">Email</label>
         <input type="email" id="fEmail" autocomplete="email" maxlength="120" placeholder="you@example.com">
-      </div>
-
-      <div class="fld">
+      </div><div class="fld">
         <label for="fCity">City you live in</label>
         <input type="text" id="fCity" data-city-wheel maxlength="60" placeholder="pick your city">
-      </div>
-
-      <div class="fld">
-        <span class="lbl" id="lblG">Gender</span>
-        <div class="pick" id="gPick" role="radiogroup" aria-labelledby="lblG">
-          <input type="radio" name="gender" id="g1" value="Woman"><label for="g1">Woman</label>
-          <input type="radio" name="gender" id="g2" value="Man"><label for="g2">Man</label>
-          <input type="radio" name="gender" id="g3" value="Transgender"><label for="g3">Transgender</label>
-          <input type="radio" name="gender" id="g4" value="Other"><label for="g4">Other</label>
-          <input type="radio" name="gender" id="g5" value="Prefer not to say"><label for="g5">Prefer not to say</label>
-        </div>
-      </div>
-
-      <div class="fld">
-        <span class="lbl" id="lblA">Age</span>
-        <div class="pick" id="aPick" role="radiogroup" aria-labelledby="lblA">
-          <input type="radio" name="age_group" id="a1" value="Under 18"><label for="a1">Under 18</label>
-          <input type="radio" name="age_group" id="a2" value="18-21"><label for="a2">18&ndash;21</label>
-          <input type="radio" name="age_group" id="a3" value="22-26"><label for="a3">22&ndash;26</label>
-          <input type="radio" name="age_group" id="a4" value="27-34"><label for="a4">27&ndash;34</label>
-          <input type="radio" name="age_group" id="a5" value="35-44"><label for="a5">35&ndash;44</label>
-          <input type="radio" name="age_group" id="a6" value="45+"><label for="a6">45+</label>
-        </div>
-      </div>
-
-      <div class="fld">
+      </div></div><div class="pair"><div class="fld"><label for="fGender">Gender</label><select id="fGender" required><option value="">Choose</option><option value="Woman">Woman</option><option value="Man">Man</option><option value="Transgender">Transgender</option><option value="Other">Other</option><option value="Prefer not to say">Prefer not to say</option></select></div><div class="fld"><label for="fAge">Age</label><select id="fAge" required><option value="">Choose</option><option value="Under 18">Under 18</option><option value="18-21">18&ndash;21</option><option value="22-26">22&ndash;26</option><option value="27-34">27&ndash;34</option><option value="35-44">35&ndash;44</option><option value="45+">45+</option></select></div></div></div></section>
+<section class="grp grp--work"><h3 class="grp__h">Your work</h3><div class="grp__b"><div class="fld">
         <label for="fLink">Social link</label>
         <p class="hint">Share a public profile or website so we can see what you&rsquo;re building.</p>
         <div class="socials" aria-label="tap one to start the link">
@@ -123,20 +98,16 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
         </div>
         <input type="text" id="fLink" inputmode="url" maxlength="200" placeholder="instagram.com/&hellip;">
         <div class="opt2"><input type="text" id="fLink2" inputmode="url" maxlength="200" placeholder="one more"></div>
-      </div>
-
-      <div class="fld">
+      </div><div class="pair pair--wide"><div class="fld">
         <label for="fProject">What are you building?</label>
-        <p class="hint">Tell us a little more, below.</p>
+        
         <div class="talk-wrap">
           <textarea id="fProject" maxlength="600" placeholder="Don't use AI, just tell us what it is."></textarea>
           <button type="button" class="mic" data-for="fProject" hidden aria-label="speak your answer">
             <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>
           </button>
         </div>
-      </div>
-
-      <div class="fld">
+      </div><div class="fld">
         <label for="fWhy">Why do you want to attend?</label>
         <div class="talk-wrap">
           <textarea id="fWhy" maxlength="600" placeholder="Write your honest first thoughts."></textarea>
@@ -144,9 +115,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
             <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>
           </button>
         </div>
-      </div>
-
-      <div class="fld">
+      </div></div><div class="fld">
         <span class="lbl" id="lblF">How did you find us?</span>
         <div class="pick" id="fPick" role="radiogroup" aria-labelledby="lblF">
           <input type="radio" name="found" id="s1" value="Instagram"><label for="s1">Instagram</label>
@@ -159,14 +128,8 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
         <div class="opt2" id="refWho" hidden>
           <input type="text" id="fRef" maxlength="60" placeholder="their name, and we&rsquo;ll thank them">
         </div>
-      </div>
-
-      <div class="fld keep" id="dFld">
-        <span class="lbl" id="lblD">Which Sunday?</span>
-        <div class="pick pick-d" id="dPick" role="radiogroup" aria-labelledby="lblD"></div><div class="pick pick-d" id="dPick2" role="radiogroup" aria-labelledby="lblD" style="display:none"></div>
-      </div>
-
-      <div class="checks" id="checks">
+      </div></div></section>
+<section class="grp grp--send"><h3 class="grp__h">Confirm</h3><div class="grp__b"><div class="nudge nudge--room"><p class="score"><b>9.5</b></p><p class="score__say">out of 10 people said they would recommend it to someone they love.</p><a href="/build-club/#people" target="_blank" rel="noopener">What kind of people attend &rarr;</a></div><div class="checks" id="checks">
         <label class="check">
           <input type="checkbox" id="cOk">
           <span class="box"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 6 12 13.5 4"/></svg></span>
@@ -175,18 +138,11 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
         <label class="check">
           <input type="checkbox" id="cFee">
           <span class="box"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 6 12 13.5 4"/></svg></span>
-          <span id="feeClub">I know the fee is &#8377;<b id="tickFee">1999</b>, paid after I'm invited</span><span id="feeOther" style="display:none">I know Venture Catalyst is paid in a fee or in equity, agreed when we talk</span>
+          <span id="feeClub">I know the fee is &#8377;<b id="tickFee">1499</b>, paid after I'm invited</span><span id="feeOther" style="display:none">I know Venture Catalyst is paid in a fee or in equity, agreed when we talk</span>
         </label>
-      </div>
-
-
-      <input type="text" name="website" id="fHp" tabindex="-1" autocomplete="off" style="position:absolute;left:-5000px" aria-hidden="true">
-
-      <div>
-        <button class="cta" type="submit" id="sendBtn">Send request <span class="arw">&rarr;</span></button>
-      </div>
-      <p class="form-note" id="note" role="status"></p>
-    </form>
+      </div><div class="send"><button class="cta" type="submit" id="sendBtn">Send request <span class="arw">&rarr;</span></button></div><p class="form-note" id="note" role="status"></p></div></section>
+<input type="text" name="website" id="fHp" tabindex="-1" autocomplete="off" style="position:absolute;left:-5000px" aria-hidden="true">
+</form>
 
     <div class="sent" id="sent" role="status">
       <svg class="stamp" viewBox="0 0 220 220"  role="img" aria-label="YOUR REQUEST IS IN. RECEIVED." style="--r:-14deg;"><defs><filter id="roughgot" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".6" numOctaves="3" seed="4" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -4 3" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter><path id="arcTgot" d="M28 110a82 82 0 0 1 164 0"/><path id="arcBgot" d="M22 110a88 88 0 0 0 176 0"/></defs><g filter="url(#roughgot)"><circle cx="110" cy="110" r="105" stroke-width="5"/><circle cx="110" cy="110" r="66" stroke-width="2.5"/><text font-size="21" letter-spacing=".8" text-anchor="middle"><textPath href="#arcTgot" startOffset="50%">YOUR REQUEST</textPath></text><text font-size="21" letter-spacing=".8" text-anchor="middle"><textPath href="#arcBgot" startOffset="50%">IS IN</textPath></text><text x="110" y="119" text-anchor="middle" font-size="24" letter-spacing="-.6" transform="rotate(-8 110 110)">RECEIVED</text></g></svg>
@@ -343,7 +299,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
     /* Date fluid swaps the whole sentence: there is no Sunday to name, and
        the city is the one they live in, if they gave one. */
     var fluid = iso === 'fluid', home = $('fCity') ? $('fCity').value.trim() : '';
-    $('tickFee').textContent = (!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(iso))) || 1999;
+    $('tickFee').textContent = (!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(iso))) || 1499;
     $('tickFixed').style.display = fluid ? 'none' : '';
     $('tickFluid').style.display = fluid ? '' : 'none';
     if (fluid) {
@@ -1109,8 +1065,8 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
     { el: 'fName',    msg: 'Your name first.' },
     { el: 'fPhone',   msg: 'A number we can reach you on. The invite has nowhere to land without it.', test: function (v) { return v.replace(/\D/g, '').length >= 10; } },
     { el: 'fEmail',   msg: 'An email that reaches you.', test: function (v) { return /^\S+@\S+\.\S+$/.test(v); } },
-    { el: 'gPick',    msg: 'Pick one. “Prefer not to say” is a real answer.', pick: 'gender' },
-    { el: 'aPick',    msg: 'Which bracket are you in?', pick: 'age_group' },
+    { el: 'fGender',  msg: 'Pick one. “Prefer not to say” is a real answer.' },
+    { el: 'fAge',     msg: 'Which bracket are you in?' },
     { el: 'fLink',    msg: 'One link. Anywhere you exist.' },
     { el: 'fProject', msg: 'This is the one we read closest.' },
     { el: 'fWhy',     msg: 'Your honest first thoughts.' },
@@ -1168,7 +1124,7 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
          sunday it has already seen once, so this never doubles up, and it
          checks the number again there. */
       var row = { form: 'smbc', returning: 'yes', name: name, phone: phone, city: city, date: isoOf(chosenISO),
-                  fee_ok: 'yes', fee: String((window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(chosenISO))) || 1999) };
+                  fee_ok: 'yes', fee: String((window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(chosenISO))) || 1499) };
       try { navigator.sendBeacon(ENDPOINT, new URLSearchParams(row)); } catch (e) {}
       var d = new Date(isoOf(chosenISO) + 'T00:00:00Z');
       var waText = 'Hey, I have been to Sunday Morning Build Club before and I\u2019d like to come again - ' +
@@ -1356,11 +1312,11 @@ addEventListener('load',lift);setTimeout(lift,first?2200:1800)})()</script>
       // guess where the first answer ended.
       project: $('fProject').value.trim(),
       why: $('fWhy').value.trim(),
-      gender: picked.gender, age_group: picked.age_group,
+      gender: $('fGender').value, age_group: $('fAge').value,
       found: picked.found,
       ref_name: NAMED_REF[picked.found] ? $('fRef').value.trim() : '',
       city: cityFor(sendISO), date: isoOf(sendISO), date_fluid: fluid ? 'yes' : '',
-      fee_ok: 'yes', fee: String((!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(sendISO))) || 1999)
+      fee_ok: 'yes', fee: String((!fluid && window.SMBC_CITY && window.SMBC_CITY.priceAt(isoOf(sendISO))) || 1499)
     };
     /* His own words, carrying the two things the CRM needs to match this
        message to this application: which Sunday and which city. */

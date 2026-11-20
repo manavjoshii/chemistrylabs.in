@@ -153,3 +153,82 @@
 .cap b{font:800 1.05rem/1 var(--print)}
 .cap em{font:700 .72rem/1 var(--typed);font-style:normal;text-transform:uppercase}
 .rv{opacity:1}
+
+/* ── ONE PAGE, SHORT (/apply/, 20 Nov 2026) ──
+   Four groups with a label each, every field a clear white box of one
+   height, one accent for focus, and the proof stated as a number. */
+.ask-sheet:has(.oneform){--line:rgba(16,13,9,.2);--line-hi:rgba(16,13,9,.42);--muted:rgba(16,13,9,.6);--r:4px}
+.oneform{display:block;margin-top:clamp(14px,2vw,22px)}
+.grp{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding:clamp(22px,2.6vw,30px) 0;border-top:1px solid var(--line)}
+.grp:first-child{border-top:0;padding-top:6px}
+.grp--send{padding-bottom:0}
+.grp__h{margin:0;font:700 .74rem/1.2 var(--text);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.grp__b{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;min-width:0}
+@media (min-width:760px){.grp{grid-template-columns:132px minmax(0,1fr);column-gap:28px}.grp__h{padding-top:3px}}
+.oneform .duo,.oneform .pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.oneform .pair--wide{grid-template-columns:minmax(0,1fr)}
+@media (min-width:640px){.oneform .pair--wide{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+#f.again .grp--work,#f.again .grp--you .pair{display:none}
+
+/* fields: one white box, one height */
+.oneform .fld label:not(.pick label),.oneform .fld .lbl{font:600 .93rem/1.25 var(--text);margin-bottom:8px;color:var(--ink)}
+.oneform .fld .hint{font:400 .88rem/1.35 var(--text);color:var(--muted);margin:-2px 0 10px}
+.oneform .fld input:not([type=radio]):not([type=checkbox]),.oneform .fld select,.oneform .fld textarea{height:48px;padding:0 14px;background:#fff;border:1.5px solid var(--line);border-radius:var(--r);font:400 1rem/1.3 var(--text);color:var(--ink);transition:border-color .15s,box-shadow .15s}
+.oneform .fld textarea{height:auto;min-height:112px;padding:12px 14px;line-height:1.45;background-image:none;resize:vertical}
+.oneform .fld input:hover,.oneform .fld select:hover,.oneform .fld textarea:hover{border-color:var(--line-hi)}
+.oneform .fld input:focus,.oneform .fld select:focus,.oneform .fld textarea:focus{outline:0;background-color:#fff;border-color:var(--ink);box-shadow:0 0 0 3px rgba(16,13,9,.09)}
+.oneform .fld input::placeholder,.oneform .fld textarea::placeholder{color:rgba(16,13,9,.4)}
+.oneform .fld input.bad,.oneform .fld select.bad,.oneform .fld textarea.bad{border-color:var(--redpen);box-shadow:0 0 0 3px rgba(201,32,27,.14)}
+.oneform .fld select{display:block;width:100%;-webkit-appearance:none;appearance:none;padding-right:38px;cursor:pointer;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23100d09' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 14px center/11px}
+.oneform .fld select:invalid{color:rgba(16,13,9,.4)}
+.oneform .fld .opt2{margin-top:8px}
+.oneform .mic{right:8px;bottom:8px;width:34px;height:34px;border:1.5px solid var(--line);background:#fff}
+.oneform .socials{gap:6px;margin-bottom:8px}
+.oneform .soc{width:38px;height:38px;border:1.5px solid var(--line);border-radius:var(--r);background:#fff}
+.oneform .soc:hover{border-color:var(--ink);background:#fff;transform:none}
+.fld:has(#fLink:placeholder-shown) .opt2{display:none}
+
+/* choices: boxes of the same family; a pick fills in ink */
+.oneform .pick:not(.pick-d){gap:8px}
+.oneform .pick:not(.pick-d) label{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;background:#fff;border:1.5px solid var(--line);border-radius:var(--r);font:500 .95rem/1.2 var(--text);transition:border-color .15s,background .15s,color .15s}
+.oneform .pick:not(.pick-d) label:hover{transform:none;border-color:var(--line-hi)}
+.oneform .pick:not(.pick-d) input:checked+label{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:600}
+.oneform .pick.bad label{border-color:var(--redpen);color:var(--ink)}
+#toPick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#toPick label{--c:var(--sun);justify-content:flex-start;width:100%;min-height:60px;padding:10px 14px 10px 20px;font:800 clamp(.98rem,1.5vw,1.08rem)/1.15 var(--print);letter-spacing:-.015em;color:var(--ink);box-shadow:inset 6px 0 0 var(--c)}
+#toPick label[for="to_content"]{--c:var(--pink)}
+#toPick input:checked+label{background:var(--c);border-color:var(--ink);color:var(--ink);box-shadow:none}
+
+/* Sundays: one row of cards */
+.oneform .pick-d{flex-wrap:nowrap;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:3px 3px 6px;scrollbar-width:none}
+.oneform .pick-d::-webkit-scrollbar{display:none}
+.oneform .pick-d label,.oneform .more-d{flex:0 0 auto;width:100px;min-height:104px;scroll-snap-align:start;border:1.5px solid var(--line);border-radius:6px;background:#fff;transition:border-color .15s,background .15s}
+.oneform .pick-d label:hover,.oneform .more-d:hover{transform:none;border-color:var(--line-hi)}
+.oneform .pick-d input:checked+label{transform:none;background:var(--to,var(--sun));border-color:var(--ink)}
+.oneform .more-d{border-style:dashed}
+@media (max-width:560px){.oneform .pick-d{margin-inline:calc(-1*clamp(24px,4vw,52px));padding-inline:clamp(24px,4vw,52px)}.oneform .pick-d label,.oneform .more-d{width:94px}}
+
+/* proof: the quote, then the score as a number */
+.oneform .nudge{margin:0;padding-left:14px;border-left:1.5px solid var(--line-hi);font-size:.93rem}
+.oneform .nudge--room{display:none;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:2px 16px;padding:16px 18px;border:1.5px solid var(--line);border-radius:6px;background:#fff}
+html[data-to="club"] .oneform .nudge--room{display:grid}
+.nudge--room .score{grid-row:span 2;margin:0;font:900 2.6rem/1 var(--print);letter-spacing:-.04em;color:var(--ink)}
+.nudge--room .score b{font-weight:900}
+.nudge--room .score small{font-size:.42em;font-weight:700;letter-spacing:0;color:var(--muted)}
+.nudge--room .score__say{margin:0;font:500 .95rem/1.3 var(--text);color:var(--ink)}
+.nudge--room a{font:600 .9rem/1.3 var(--text);color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line-hi)}
+.nudge--room a:hover{text-decoration-color:var(--ink)}
+
+/* the ticks and the button */
+.oneform .checks{gap:12px}
+.oneform .check{font:500 .97rem/1.35 var(--text);gap:12px}
+.oneform .check .box{width:22px;height:22px;border:1.5px solid var(--line-hi);border-radius:var(--r);background:#fff}
+.oneform .check input:checked+.box{border-color:var(--ink)}
+.oneform .check .box svg{left:-4px;top:-9px;width:32px;height:32px}
+.oneform .send .cta{width:100%;min-height:56px}
+.oneform .form-note:empty{display:none}
+.ask-sheet:has(.oneform) .again-btn{font:600 .95rem/1.3 var(--text);color:var(--ink);text-decoration-color:var(--line-hi)}
+.ask-sheet:has(.oneform) .again-btn:hover{text-decoration-color:var(--ink)}
+/* red means an error on this form, so the tick is drawn in ink */
+.oneform .check .box svg{stroke:var(--ink)}
+.oneform .pick-d input:checked+label i{color:var(--ink)}
