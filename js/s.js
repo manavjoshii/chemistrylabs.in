@@ -10,6 +10,12 @@
   var URL_E = local ? 'http://localhost:8787/e' : 'https://cl-signal.manavjoshi01.workers.dev/e';
   var ls = {}, ss = {};
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return ls[k] || null; } }
+  /* Which version of each split test this browser sees, as "hl1:b". Set by the page's switch script. */
+  function arms() {
+    var o = [];
+    try { for (var i = 0; i < localStorage.length && o.length < 5; i++) { var k = localStorage.key(i); if (k && k.indexOf('cl-x-') === 0) { var v = localStorage.getItem(k); if (v === 'a' || v === 'b') o.push(k.slice(5) + ':' + v); } } } catch (e) {}
+    return o.join(',');
+  }
   function put(k, v) { try { localStorage.setItem(k, v); } catch (e) { ls[k] = v; } }
   function sget(k) { try { return sessionStorage.getItem(k); } catch (e) { return ss[k] || null; } }
   function sput(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { ss[k] = v; } }
@@ -34,7 +40,7 @@
   function flush() {
     clearTimeout(timer); timer = 0;
     if (!queue.length) return;
-    var body = JSON.stringify({ v: vid, s: sid, p: pid, u: path, now: Date.now(), e: queue.splice(0, 60) });
+    var body = JSON.stringify({ v: vid, s: sid, p: pid, u: path, now: Date.now(), x: arms(), e: queue.splice(0, 60) });
     var sent = false;
     try { if (beacon) sent = beacon(URL_E, new Blob([body], { type: 'text/plain' })); } catch (e) {}
     if (!sent) { try { fetch(URL_E, { method: 'POST', body: body, keepalive: true, mode: 'cors', headers: { 'content-type': 'text/plain' } }).catch(function () {}); } catch (e) {} }
@@ -243,7 +249,7 @@
     if (CLARITY) {
       window.clarity = window.clarity || function () { (clarity.q = clarity.q || []).push(arguments); };
       var c = document.createElement('script'); c.async = true; c.src = 'https://www.clarity.ms/tag/' + CLARITY; document.head.appendChild(c);
-      clarity('set', 'visitor', vid); clarity('set', 'source', from.src);
+      clarity('set', 'visitor', vid); clarity('set', 'source', from.src); arms().split(',').forEach(function (x) { if (x) clarity('set', 'x_' + x.split(':')[0], x.split(':')[1]); });
     }
   }
   function start() { watch(); seen(); if (document.readyState === 'complete') setTimeout(outside, 1200); else addEventListener('load', function () { setTimeout(outside, 1200); }); }

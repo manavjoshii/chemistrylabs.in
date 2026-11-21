@@ -8,6 +8,8 @@
 @font-face{font-family:"HND";src:url(/fonts/HelveticaNowDisplay-Black.woff2) format("woff2");font-weight:900;font-display:swap}
 @font-face{font-family:"Schoolbell";src:url(/fonts/Schoolbell.ttf) format("truetype");font-display:swap}
 :root{
+  /* The site has one look. Phones in dark mode would otherwise recolour it and its object photos. */
+  color-scheme:only light;
   --sulphur:#f6cb0e;--redpen:#c9201b;--bengal:#c9201b;--print:"HND",Helvetica,Arial,sans-serif;--on-accent:#fdf8f0;--accent:#c9201b;--deep:#100d09;--penc:#c9201b;
   --green:#17823f;--green-deep:#0f6a31;--red:#c9201b;--logo-red:#bc1823;--sun:#f6cb0e;--pink:#ec3a90;--sky:#0b9fcc;--copper:#2036c8;--paper:#fdf8f0;--ink:#100d09;
   --text:"HND","Helvetica Neue",Helvetica,Arial,sans-serif;--hand:"Schoolbell","Bradley Hand",cursive;--typed:var(--text);--giant:var(--text);
